@@ -83,12 +83,12 @@ protected:
 void GpsL1CaDllFllPllDpeTrackingInternalTest::init()
 {
     gnss_synchro.Channel_ID = 0;
-    gnss_synchro.System = 'E';
-    std::string signal = "1B";
+    gnss_synchro.System = 'G';
+    std::string signal = "1C";
     signal.copy(gnss_synchro.Signal, 2, 0);
     gnss_synchro.PRN = 11;
 
-    config->set_property("GNSS-SDR.internal_fs_hz", "8000000");
+    config->set_property("GNSS-SDR.internal_fs_hz", "4000000");
     config->set_property("Tracking_Galileo.item_type", "gr_complex");
     config->set_property("Tracking_Galileo.dump", "true");
     config->set_property("Tracking_Galileo.dump_filename", "../data/veml_tracking_ch_");
@@ -105,14 +105,14 @@ TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, Instantiate)
 {
 
     init();
-    auto tracking = factory->GetBlock(config, "Tracking", "Galileo_E1_DLL_PLL_VEML_Tracking", 1, 1, queue);
-    EXPECT_STREQ("Galileo_E1_DLL_PLL_VEML_Tracking", tracking->implementation().c_str());
+    auto tracking = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking", 1, 1, queue);
+    EXPECT_STREQ("GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking", tracking->implementation().c_str());
 }
 
 
 TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ConnectAndRun)
 {
-    int fs_in = 8000000;
+    int fs_in = 4000000;
     int nsamples = 40000000;
     struct timeval tv;
     long long int begin = 0;
@@ -122,8 +122,8 @@ TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ConnectAndRun)
     top_block = gr::make_top_block("Tracking test");
 
     // Example using smart pointers and the block factory
-    std::shared_ptr<GNSSBlockInterface> trk_ = factory->GetBlock(config, "Tracking", "Galileo_E1_DLL_PLL_VEML_Tracking", 1, 1, queue);
-    std::shared_ptr<GalileoE1DllPllVemlTracking> tracking = std::dynamic_pointer_cast<GalileoE1DllPllVemlTracking>(trk_);
+    std::shared_ptr<GNSSBlockInterface> trk_ = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking", 1, 1, queue);
+    std::shared_ptr<GpsL1CaDllFllPllDpeTracking> tracking = std::dynamic_pointer_cast<GpsL1CaDllFllPllDpeTracking>(trk_);
 
     ASSERT_NO_THROW( {
         tracking->set_channel(gnss_synchro.Channel_ID);
@@ -169,22 +169,18 @@ TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ValidationOfResults)
     struct timeval tv;
     long long int begin = 0;
     long long int end = 0;
-    // int num_samples = 40000000; // 4 Msps
-    // unsigned int skiphead_sps = 24000000; // 4 Msps
-    int num_samples = 80000000; // 8 Msps
-    unsigned int skiphead_sps = 8000000; // 8 Msps
+    int num_samples = 8000000;
+    unsigned int skiphead_sps = 4000000;
     init();
     queue = gr::msg_queue::make(0);
     top_block = gr::make_top_block("Tracking test");
 
     // Example using smart pointers and the block factory
-    std::shared_ptr<GNSSBlockInterface> trk_ = factory->GetBlock(config, "Tracking", "Galileo_E1_DLL_PLL_VEML_Tracking", 1, 1, queue);
+    std::shared_ptr<GNSSBlockInterface> trk_ = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking", 1, 1, queue);
     std::shared_ptr<TrackingInterface> tracking = std::dynamic_pointer_cast<TrackingInterface>(trk_);
 
-    // gnss_synchro.Acq_delay_samples = 1753; // 4 Msps
-    // gnss_synchro.Acq_doppler_hz = -9500; // 4 Msps
-    gnss_synchro.Acq_delay_samples = 17256; // 8 Msps
-    gnss_synchro.Acq_doppler_hz = -8750; // 8 Msps
+    gnss_synchro.Acq_delay_samples = 524;
+    gnss_synchro.Acq_doppler_hz = -1680;
     gnss_synchro.Acq_samplestamp_samples = 0;
 
     ASSERT_NO_THROW( {
@@ -205,7 +201,7 @@ TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ValidationOfResults)
 
     ASSERT_NO_THROW( {
         std::string path = std::string(TEST_PATH);
-        std::string file = path + "signal_samples/GSoC_CTTC_capture_2012_07_26_4Msps_4ms.dat";
+        std::string file = path + "signal_samples/GPS_L1_CA_ID_1_Fs_4Msps_2ms.dat";
         const char * file_name = file.c_str();
         gr::blocks::file_source::sptr file_source = gr::blocks::file_source::make(sizeof(gr_complex),file_name,false);
         gr::blocks::skiphead::sptr skip_head = gr::blocks::skiphead::make(sizeof(gr_complex), skiphead_sps);
