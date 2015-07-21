@@ -77,7 +77,7 @@ gps_l1_ca_dll_fll_pll_dpe_make_tracking_cc(
 
 
 /*!
- * \brief This class implements a DLL and a FLL assisted PLL tracking loop block
+ * \brief This class implements a DLL and a FLL assisted PLL tracking loop block for DPE
  */
 class Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc: public gr::block
 {

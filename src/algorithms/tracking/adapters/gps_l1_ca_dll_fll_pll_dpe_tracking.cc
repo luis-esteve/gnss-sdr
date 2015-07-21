@@ -1,5 +1,5 @@
 /*!
- * \file gps_l1_ca_dll_fll_pll-dpe_tracking.cc
+ * \file gps_l1_ca_dll_fll_pll_dpe_tracking.cc
  * \brief Interface of an adapter of a code DLL + carrier FLL/PLL tracking
  * loop used in Direct Position Estimation for GPS L1 C/A to a 
  * TrackingInterface
@@ -103,6 +103,7 @@ GpsL1CaDllFllPllDpeTracking::GpsL1CaDllFllPllDpeTracking(
                     fll_bw_hz,
                     pll_bw_hz,
                     dll_bw_hz,
+                    num_correlators,
                     correlators_space_chips);
         }
     else
