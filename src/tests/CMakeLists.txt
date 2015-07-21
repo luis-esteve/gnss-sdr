@@ -184,7 +184,8 @@ target_link_libraries(run_tests ${CLANG_FLAGS}
                                 ${ARMADILLO_LIBRARIES}
                                 ${VOLK_LIBRARIES}
                                 gnss_sp_libs 
-                                gnss_rx  
+                                gnss_rx
+                                gnss_system_parameters  
                                 signal_generator_blocks
                                 signal_generator_adapters
                                 out_adapters
@@ -214,7 +215,8 @@ target_link_libraries(control_thread_test ${Boost_LIBRARIES}
                                           ${GFLAGS_LIBS} 
                                           ${GLOG_LIBRARIES} 
                                           ${GTEST_LIBRARIES} 
-                                          gnss_sp_libs 
+                                          gnss_sp_libs
+                                          gnss_system_parameters
                                           gnss_rx
                                           ${VOLK_GNSSSDR_LIBRARIES} ${ORC_LIBRARIES}
                                           )
@@ -241,6 +243,7 @@ target_link_libraries(flowgraph_test ${Boost_LIBRARIES}
                                      ${GTEST_LIBRARIES} 
                                      gnss_sp_libs 
                                      gnss_rx
+                                     gnss_system_parameters
                                      ${VOLK_GNSSSDR_LIBRARIES} ${ORC_LIBRARIES}
                                      )
 

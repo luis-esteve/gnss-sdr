@@ -711,8 +711,8 @@ if(NOT ARMADILLO_FOUND)
      message(STATUS " Armadillo will be downloaded and built automatically ")
      message(STATUS " when doing 'make'. ")
 
-     set(armadillo_RELEASE 5.200.1)
-     set(armadillo_MD5 "e316706ad744f5cc8aecd71213c142df")
+     set(armadillo_RELEASE 5.200.2)
+     set(armadillo_MD5 "ef57ba4c473a3b67c672441a7face09e")
 
      ExternalProject_Add(
          armadillo-${armadillo_RELEASE}
@@ -888,7 +888,7 @@ endif(ENABLE_OPENCL)
 
 
 ################################################################################
-# GPerftools - http://code.google.com/p/gperftools/ (OPTIONAL)
+# GPerftools - https://github.com/gperftools/gperftools (OPTIONAL)
 ################################################################################
 
 if(ENABLE_GPERFTOOLS)
@@ -896,7 +896,7 @@ if(ENABLE_GPERFTOOLS)
     if ( NOT GPERFTOOLS_FOUND )
         message(STATUS "Although ENABLE_GPERFTOOLS has been set to ON, GPerftools has not been found.")
         message(STATUS "Binaries will be compiled without 'tcmalloc' and 'profiler' libraries.")
-        message(STATUS "You can install GPerftools from http://code.google.com/p/gperftools/")
+        message(STATUS "You can install GPerftools from https://github.com/gperftools/gperftools")
     else( NOT GPERFTOOLS_FOUND )
         message(STATUS "GPerftools libraries found." )
         message(STATUS "Binaries will be compiled with 'tcmalloc' and 'profiler' libraries.")
