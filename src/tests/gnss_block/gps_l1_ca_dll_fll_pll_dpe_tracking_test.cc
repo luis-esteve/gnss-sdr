@@ -47,7 +47,7 @@
 #include "in_memory_configuration.h"
 #include "gnss_sdr_valve.h"
 #include "gnss_synchro.h"
-#include "gps_l1_ca_dll_fll_pll_dpe_tracking_cc.h"
+#include "gps_l1_ca_dll_fll_pll_dpe_tracking.h"
 
 
 class GpsL1CaDllFllPllDpeTrackingInternalTest: public ::testing::Test
@@ -90,13 +90,17 @@ void GpsL1CaDllFllPllDpeTrackingInternalTest::init()
 
     config->set_property("GNSS-SDR.internal_fs_hz", "4000000");
     config->set_property("Tracking_1C.item_type", "gr_complex");
-    config->set_property("Tracking_1C.dump", "true");
-    config->set_property("Tracking_1C.dump_filename", "../data/veml_tracking_ch_");
-    config->set_property("Tracking_1C.implementation", "Galileo_E1_DLL_PLL_VEML_Tracking");
-    config->set_property("Tracking_1C.early_late_space_chips", "0.15");
-    config->set_property("Tracking_1C.very_early_late_space_chips", "0.6");
+    config->set_property("Tracking_1C.dump", "false");
+    config->set_property("Tracking_1C.dump_filename", "../data/dpe_tracking_ch_");
+    config->set_property("Tracking_1C.implementation", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking");
+    config->set_property("Tracking_1C.order", "2");
     config->set_property("Tracking_1C.pll_bw_hz", "30.0");
+    config->set_property("Tracking_1C.fll_bw_hz", "100.0");
     config->set_property("Tracking_1C.dll_bw_hz", "2.0");
+    config->set_property("Tracking_1C.number_of_correlators", "3");
+    config->set_property("Tracking_1C.correlators_space_chips", "0.5");
+    
+
 }
 
 
@@ -224,3 +228,4 @@ TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ValidationOfResults)
     }) << "Failure running the top_block." << std::endl;
 
     std::cout <<  "Tracked " << num_samples << " samples in " << (end - begin) << " microseconds" << std::endl;
+}

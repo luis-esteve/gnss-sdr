@@ -59,9 +59,9 @@
 class Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc;
 
 typedef boost::shared_ptr<Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc>
-Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc_sptr;
+gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr;
 
-Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc_sptr
+gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr
 gps_l1_ca_dll_fll_pll_dpe_make_tracking_cc(
         long if_freq,
         long fs_in,
@@ -73,6 +73,7 @@ gps_l1_ca_dll_fll_pll_dpe_make_tracking_cc(
         float fll_bw_hz,
         float pll_bw_hz,
         float dll_bw_hz,
+        unsigned int num_correlators,
         float correlators_space_chips);
 
 
@@ -106,8 +107,8 @@ public:
 
     void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 private:
-    friend Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc_sptr
-    gps_l1_ca_dll_fll_pll_make_tracking_cc(
+    friend gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr
+    gps_l1_ca_dll_fll_pll_dpe_make_tracking_cc(
             long if_freq,
             long fs_in, unsigned
             int vector_length,

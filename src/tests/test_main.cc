@@ -93,6 +93,7 @@ DECLARE_string(log_dir);
 #endif
 #include "gnss_block/gps_l1_ca_pcps_quicksync_acquisition_gsoc2014_test.cc"
 #include "gnss_block/gps_l1_ca_pcps_tong_acquisition_gsoc2013_test.cc"
+#include "gnss_block/gps_l1_ca_dll_fll_pll_dpe_tracking_test.cc"
 #include "gnss_block/galileo_e1_pcps_ambiguous_acquisition_test.cc"
 #include "gnss_block/galileo_e1_pcps_ambiguous_acquisition_gsoc_test.cc"
 #include "gnss_block/galileo_e1_pcps_ambiguous_acquisition_gsoc2013_test.cc"

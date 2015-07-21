@@ -79,6 +79,7 @@
 #include "gps_l1_ca_dll_pll_tracking.h"
 #include "gps_l1_ca_dll_pll_optim_tracking.h"
 #include "gps_l1_ca_dll_fll_pll_tracking.h"
+#include "gps_l1_ca_dll_fll_pll_dpe_tracking.h"
 #include "gps_l1_ca_tcp_connector_tracking.h"
 #include "galileo_e1_dll_pll_veml_tracking.h"
 #include "galileo_volk_e1_dll_pll_veml_tracking.h"
@@ -1301,6 +1302,12 @@ std::unique_ptr<GNSSBlockInterface> GNSSBlockFactory::GetBlock(
     else if (implementation.compare("GPS_L1_CA_DLL_FLL_PLL_Tracking") == 0)
         {
             std::unique_ptr<GNSSBlockInterface> block_(new GpsL1CaDllFllPllTracking(configuration.get(), role, in_streams,
+                    out_streams, queue));
+            block = std::move(block_);
+        }
+    else if (implementation.compare("GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking") == 0)
+        {
+            std::unique_ptr<GNSSBlockInterface> block_(new GpsL1CaDllFllPllDpeTracking(configuration.get(), role, in_streams,
                     out_streams, queue));
             block = std::move(block_);
         }
