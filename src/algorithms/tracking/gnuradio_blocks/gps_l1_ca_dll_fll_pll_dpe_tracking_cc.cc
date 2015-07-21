@@ -53,6 +53,8 @@
 #include "tracking_FLL_PLL_filter.h"
 #include "control_message_factory.h"
 #include "gnss_flowgraph.h"
+#include "engine.h"
+#include <math.h>
 
 /*!
  * \todo Include in definition header file
@@ -604,55 +606,66 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
             tmp_E = std::abs<float>(*d_Early);
             tmp_P = std::abs<float>(*d_Prompt);
             tmp_L = std::abs<float>(*d_Late);
-            try
-            {
-                    // EPR
-                    d_dump_file.write((char*)&tmp_E, sizeof(float));
-                    d_dump_file.write((char*)&tmp_P, sizeof(float));
-                    d_dump_file.write((char*)&tmp_L, sizeof(float));
-                    // PROMPT I and Q (to analyze navigation symbols)
-                    d_dump_file.write((char*)&prompt_I, sizeof(float));
-                    d_dump_file.write((char*)&prompt_Q, sizeof(float));
-                    // PRN start sample stamp
-                    d_dump_file.write((char*)&d_sample_counter, sizeof(unsigned long int));
-                    // accumulated carrier phase
-                    tmp_float = (float)d_acc_carrier_phase_rad;
-                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+            // try
+            // {
+            //         // EPR
+            //         d_dump_file.write((char*)&tmp_E, sizeof(float));
+            //         d_dump_file.write((char*)&tmp_P, sizeof(float));
+            //         d_dump_file.write((char*)&tmp_L, sizeof(float));
+            //         // PROMPT I and Q (to analyze navigation symbols)
+            //         d_dump_file.write((char*)&prompt_I, sizeof(float));
+            //         d_dump_file.write((char*)&prompt_Q, sizeof(float));
+            //         // PRN start sample stamp
+            //         d_dump_file.write((char*)&d_sample_counter, sizeof(unsigned long int));
+            //         // accumulated carrier phase
+            //         tmp_float = (float)d_acc_carrier_phase_rad;
+            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
 
-                    // carrier and code frequency
-                    tmp_float = (float)d_carrier_doppler_hz;
-                    d_dump_file.write((char*)&tmp_float, sizeof(float));
-                    tmp_float = (float)d_code_freq_hz;
-                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+            //         // carrier and code frequency
+            //         tmp_float = (float)d_carrier_doppler_hz;
+            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
+            //         tmp_float = (float)d_code_freq_hz;
+            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
 
-                    //PLL commands
-                    tmp_float = (float)PLL_discriminator_hz;
-                    d_dump_file.write((char*)&tmp_float, sizeof(float));
-                    tmp_float = (float)carr_nco_hz;
-                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+            //         //PLL commands
+            //         tmp_float = (float)PLL_discriminator_hz;
+            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
+            //         tmp_float = (float)carr_nco_hz;
+            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
 
-                    //DLL commands
-                    tmp_float = (float)code_error_chips;
-                    d_dump_file.write((char*)&tmp_float, sizeof(float));
-                    tmp_float = (float)code_error_filt_chips;
-                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+            //         //DLL commands
+            //         tmp_float = (float)code_error_chips;
+            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
+            //         tmp_float = (float)code_error_filt_chips;
+            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
 
-                    // CN0 and carrier lock test
-                    tmp_float = (float)d_CN0_SNV_dB_Hz;
-                    d_dump_file.write((char*)&tmp_float, sizeof(float));
-                    tmp_float = (float)d_carrier_lock_test;
-                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+            //         // CN0 and carrier lock test
+            //         tmp_float = (float)d_CN0_SNV_dB_Hz;
+            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
+            //         tmp_float = (float)d_carrier_lock_test;
+            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
 
-                    // AUX vars (for debug purposes)
-                    tmp_float = (float)d_rem_code_phase_samples;
-                    d_dump_file.write((char*)&tmp_float, sizeof(float));
-                    tmp_double = (double)(d_sample_counter + d_current_prn_length_samples);
-                    d_dump_file.write((char*)&tmp_double, sizeof(double));
+            //         // AUX vars (for debug purposes)
+            //         tmp_float = (float)d_rem_code_phase_samples;
+            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
+            //         tmp_double = (double)(d_sample_counter + d_current_prn_length_samples);
+            //         d_dump_file.write((char*)&tmp_double, sizeof(double));
+            // }
+            // catch (std::ifstream::failure e)
+            // {
+            //         LOG(INFO) << "Exception writing trk dump file "<< e.what() << std::endl;
+            // }
+            Engine *ep; //Defined Matlab engine pointer.  
+            if (!(ep=engOpen("\0"))) //Test whether to start the Matlab engine success.  
+            {  
+                std::cout<< "Can't start MATLAB engine!"<<std::endl;  
+                return EXIT_FAILURE;  
             }
-            catch (std::ifstream::failure e)
-            {
-                    LOG(INFO) << "Exception writing trk dump file "<< e.what() << std::endl;
-            }
+            //Use cin.get() to make sure that we pause long enough to be able to see the plot.  
+            std::cout<<"Hit any key to exit!"<<std::endl;  
+            std::cin.get();
+            //Close Matlab engine.  
+            engClose(ep);  
         }
     consume_each(d_current_prn_length_samples); // this is necessary in gr::block derivates
     d_sample_counter += d_current_prn_length_samples; //count for the processed samples
