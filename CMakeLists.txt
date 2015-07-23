@@ -1046,8 +1046,7 @@ set(INCLUDES "-I${MATLABROOT}/extern/include")
 set(MY_CXX_FLAGS "${MY_CXX_FLAGS} ${INCLUDES}")
 set(LIBMAT "-L${MATLABROOT}/bin/glnxa64")
 set(MY_CXX_FLAGS "${MY_CXX_FLAGS} ${LIBMAT}")
-set(MY_CXX_FLAGS "${MY_CXX_FLAGS} -leng")
-set(MY_CXX_FLAGS "${MY_CXX_FLAGS} -lmx")
+
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${MY_CXX_FLAGS}")
 
