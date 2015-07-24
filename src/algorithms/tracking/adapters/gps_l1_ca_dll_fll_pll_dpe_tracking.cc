@@ -42,6 +42,7 @@
 #include <glog/logging.h>
 #include "GPS_L1_CA.h"
 #include "configuration_interface.h"
+//#include <iostream> // only for debugging
 
 
 using google::LogMessage;
@@ -77,6 +78,7 @@ GpsL1CaDllFllPllDpeTracking::GpsL1CaDllFllPllDpeTracking(
     fs_in = configuration->property("GNSS-SDR.internal_fs_hz", 2048000);
     f_if = configuration->property(role + ".if", 0);
     dump = configuration->property(role + ".dump", false);
+    //std::cout << "dump set to " << dump << std::endl;
     order = configuration->property(role + ".order", 2);
     pll_bw_hz = configuration->property(role + ".pll_bw_hz", 50.0);
     fll_bw_hz = configuration->property(role + ".fll_bw_hz", 100.0);

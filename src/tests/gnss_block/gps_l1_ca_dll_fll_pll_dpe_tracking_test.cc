@@ -89,16 +89,16 @@ void GpsL1CaDllFllPllDpeTrackingInternalTest::init()
     gnss_synchro.PRN = 11;
 
     config->set_property("GNSS-SDR.internal_fs_hz", "4000000");
-    config->set_property("Tracking_1C.item_type", "gr_complex");
-    config->set_property("Tracking_1C.dump", "false");
-    config->set_property("Tracking_1C.dump_filename", "../data/dpe_tracking_ch_");
-    config->set_property("Tracking_1C.implementation", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking");
-    config->set_property("Tracking_1C.order", "2");
-    config->set_property("Tracking_1C.pll_bw_hz", "30.0");
-    config->set_property("Tracking_1C.fll_bw_hz", "100.0");
-    config->set_property("Tracking_1C.dll_bw_hz", "2.0");
-    config->set_property("Tracking_1C.number_of_correlators", "3");
-    config->set_property("Tracking_1C.correlators_space_chips", "0.5");
+    config->set_property("Tracking.item_type", "gr_complex");
+    config->set_property("Tracking.dump", "true");
+    config->set_property("Tracking.dump_filename", "../data/dpe_tracking_ch_");
+    config->set_property("Tracking.implementation", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking");
+    config->set_property("Tracking.order", "2");
+    config->set_property("Tracking.pll_bw_hz", "30.0");
+    config->set_property("Tracking.fll_bw_hz", "100.0");
+    config->set_property("Tracking.dll_bw_hz", "2.0");
+    config->set_property("Tracking.number_of_correlators", "3");
+    config->set_property("Tracking.correlators_space_chips", "0.5");
     
 
 }
@@ -178,6 +178,10 @@ TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ValidationOfResults)
     init();
     queue = gr::msg_queue::make(0);
     top_block = gr::make_top_block("Tracking test");
+
+    bool test_dump = config->property("Tracking.dump",false);
+
+    std::cout << "test_dump set to " << test_dump << std::endl;
 
     // Example using smart pointers and the block factory
     std::shared_ptr<GNSSBlockInterface> trk_ = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking", 1, 1, queue);

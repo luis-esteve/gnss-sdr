@@ -53,8 +53,7 @@
 #include "tracking_FLL_PLL_filter.h"
 #include "control_message_factory.h"
 #include "gnss_flowgraph.h"
-#include "engine.h"
-#include <math.h>
+//#include <math.h>
 
 /*!
  * \todo Include in definition header file
@@ -183,6 +182,13 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
     d_FLL_discriminator_hz = 0.0;
     d_pull_in = false;
     d_FLL_wait = 1;
+
+    d_ep=engOpen("\0"); //Start the Matlab engine.  
+
+    //Defined mxArray, the array is one line of real numbers, N columns.
+    d_CORR = mxCreateDoubleMatrix(d_num_correlators, 1, mxREAL);
+
+    matlab_count = 0;
 }
 
 
@@ -343,6 +349,11 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::~Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc()
     volk_free(d_Late);
 
     delete[] d_Prompt_buffer;
+      
+    engClose(d_ep);  //Close Matlab engine.
+    
+    //Destruction mxArray CORR
+    mxDestroyArray(d_CORR);
 }
 
 
@@ -592,10 +603,11 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
             *out[0] = *d_acquisition_gnss_synchro;
         }
 
-
     if(d_dump)
         {
             // MULTIPLEXED FILE RECORDING - Record results to file
+
+            //std::cout << "d_num_correlators set to " << d_num_correlators << std::endl;
             float prompt_I;
             float prompt_Q;
             float tmp_E, tmp_P, tmp_L;
@@ -606,6 +618,59 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
             tmp_E = std::abs<float>(*d_Early);
             tmp_P = std::abs<float>(*d_Prompt);
             tmp_L = std::abs<float>(*d_Late);
+            
+            if(matlab_count >= 100)
+            {  
+            //si el modulo es cero, entonces es multiplo  
+                if(matlab_count%100 == 0)
+                {
+                    std::cout << "matlab_count = " << matlab_count << std::endl;
+                    mxArray *m_count = mxCreateDoubleMatrix(1, 1, mxREAL);
+                    double tmp_m_count;
+                    tmp_m_count = static_cast<double>(matlab_count);
+                    std::cout << "tmp_m_count = " << tmp_m_count << std::endl;
+                    memcpy(mxGetPr(m_count), &tmp_m_count, sizeof(double));
+                    engPutVariable(d_ep, "mat_count", m_count);
+
+
+                    //double tmp_corr[d_num_correlators];
+                    double *tmp_corr = new double [d_num_correlators];
+
+
+                    //double *d_pas_cor =  mxGetPr(d_CORR);
+            
+                    // Copy the correlators value to a vector 
+                    tmp_corr[0] = static_cast<double>(tmp_E);
+                    tmp_corr[1] = static_cast<double>(tmp_P);
+                    tmp_corr[2] = static_cast<double>(tmp_L);
+        
+                    //d_pas_cor[0] = tmp_corr[0];
+                    //d_pas_cor[1] = tmp_corr[1];
+                    //d_pas_cor[2] = tmp_corr[2];
+            
+                    //tmp_corr[0] = static_cast<double>(d_sample_counter);
+                    //tmp_corr[1] = static_cast<double>(d_sample_counter + 10);
+                    //tmp_corr[2] = static_cast<double>(d_sample_counter + 20);           
+
+                    //Copy the c ++ array of value to the corresponding mxArray 
+                    memcpy(mxGetPr(d_CORR), tmp_corr, d_num_correlators*sizeof(double));
+
+
+                    //MxArray array will be written to the Matlab workspace 
+                    engPutVariable(d_ep, "corr", d_CORR);
+
+                    //Matlab engine sends drawing commands. 
+                    engEvalString(d_ep, "plot(corr,'-.s'); grid on; title(sprintf('matlab_count = %0.1f',mat_count));");  
+            
+                    delete tmp_corr;
+                    mxDestroyArray(m_count);
+
+            
+                }
+            }
+            
+
+  
             // try
             // {
             //         // EPR
@@ -655,18 +720,16 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
             // {
             //         LOG(INFO) << "Exception writing trk dump file "<< e.what() << std::endl;
             // }
-            Engine *ep; //Defined Matlab engine pointer.  
-            if (!(ep=engOpen("\0"))) //Test whether to start the Matlab engine success.  
-            {  
-                std::cout<< "Can't start MATLAB engine!"<<std::endl;  
-                return EXIT_FAILURE;  
-            }
-            //Use cin.get() to make sure that we pause long enough to be able to see the plot.  
-            std::cout<<"Hit any key to exit!"<<std::endl;  
-            std::cin.get();
-            //Close Matlab engine.  
-            engClose(ep);  
+
+
+            //Use cin.get() to make sure that we pause long enough to be able to see the plot. 
+
+            // std::cout<<"Hit any key to exit!"<<std::endl;  
+            // std::cin.get();
+
+            
         }
+    matlab_count++;
     consume_each(d_current_prn_length_samples); // this is necessary in gr::block derivates
     d_sample_counter += d_current_prn_length_samples; //count for the processed samples
     return 1; //output tracking result ALWAYS even in the case of d_enable_tracking==false

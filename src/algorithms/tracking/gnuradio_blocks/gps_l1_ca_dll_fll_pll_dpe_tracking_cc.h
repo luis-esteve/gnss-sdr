@@ -55,6 +55,7 @@
 #include "tracking_2nd_DLL_filter.h"
 #include "gnss_synchro.h"
 #include "correlator.h"
+#include "engine.h"
 
 class Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc;
 
@@ -211,6 +212,12 @@ private:
 
     std::string d_dump_filename;
     std::ofstream d_dump_file;
+
+    Engine *d_ep; //Define Matlab engine pointer. 
+
+    mxArray *d_CORR = NULL;
+
+    unsigned int matlab_count;
 
     std::map<std::string, std::string> systemName;
     std::string sys;
