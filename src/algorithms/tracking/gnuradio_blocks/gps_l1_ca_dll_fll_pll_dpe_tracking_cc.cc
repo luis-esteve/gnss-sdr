@@ -76,13 +76,17 @@ gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr gps_l1_ca_dll_fll_pll_dpe_make_tracki
         float fll_bw_hz,
         float pll_bw_hz,
         float dll_bw_hz,
-        unsigned int num_correlators,
-        float correlators_space_chips)
+        unsigned int num_oneside_correlators,
+        float *correlators_space_chips)
 {
-
+std::cout << "make del bloque gnu" << std::endl;
+for (unsigned int i= 0; i < num_oneside_correlators; i++)
+        {
+            std::cout << " correlators_space_chips[" << i << "] = " << correlators_space_chips[i] << std::endl;
+        }
     return gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr(new Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(if_freq,
             fs_in, vector_length, queue, dump, dump_filename, order, fll_bw_hz, pll_bw_hz,dll_bw_hz,
-            num_correlators, correlators_space_chips));
+            num_oneside_correlators, correlators_space_chips));
 }
 
 
@@ -105,8 +109,8 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
         float fll_bw_hz,
         float pll_bw_hz,
         float dll_bw_hz,
-        unsigned int num_correlators,
-        float correlators_space_chips) :
+        unsigned int num_oneside_correlators,
+        float *correlators_space_chips) :
         gr::block("Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc", gr::io_signature::make(1, 1, sizeof(gr_complex)),
                 gr::io_signature::make(1, 1, sizeof(Gnss_Synchro)))
 {
@@ -119,8 +123,9 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
     d_if_freq = static_cast<double>(if_freq);
     d_fs_in = static_cast<double>(fs_in);
     d_vector_length = vector_length;
-    d_num_correlators = num_correlators;
-    d_correlators_space_chips = static_cast<double>(correlators_space_chips); // Define correlators distance (in chips)
+    d_num_oneside_correlators = num_oneside_correlators;
+    d_correlators_space_chips = new double[d_num_oneside_correlators];
+    d_correlators_space_chips[0] = static_cast<double>(correlators_space_chips[0]); // Define correlators distance (in chips)
     d_dump_filename = dump_filename;
 
     // Initialize tracking variables ==========================================
@@ -186,9 +191,14 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
     d_ep=engOpen("\0"); //Start the Matlab engine.  
 
     //Defined mxArray, the array is one line of real numbers, N columns.
-    d_CORR = mxCreateDoubleMatrix(d_num_correlators, 1, mxREAL);
+    d_CORR = mxCreateDoubleMatrix(d_num_oneside_correlators, 1, mxREAL);
 
     matlab_count = 0;
+
+    for (unsigned int i= 0; i < d_num_oneside_correlators; i++)
+        {
+            std::cout << " d_correlators_space_chips[" << i << "] = " << d_correlators_space_chips[i] << std::endl;
+        }
 }
 
 
@@ -291,11 +301,11 @@ void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::update_local_code()
     // unified loop for E, P, L code vectors
     tcode_chips = -rem_code_phase_chips;
     // Alternative EPL code generation (40% of speed improvement!)
-    early_late_spc_samples = round(d_correlators_space_chips/code_phase_step_chips);
+    early_late_spc_samples = round(d_correlators_space_chips[0]/code_phase_step_chips);
     epl_loop_length_samples = d_current_prn_length_samples + early_late_spc_samples*2;
     for (int i = 0; i < epl_loop_length_samples; i++)
         {
-            associated_chip_index = 1 + round(fmod(tcode_chips - d_correlators_space_chips, code_length_chips));
+            associated_chip_index = 1 + round(fmod(tcode_chips - d_correlators_space_chips[0], code_length_chips));
             d_early_code[i] = d_ca_code[associated_chip_index];
             tcode_chips = tcode_chips + code_phase_step_chips;
         }
@@ -348,12 +358,11 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::~Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc()
     volk_free(d_Prompt);
     volk_free(d_Late);
 
+    delete[] d_correlators_space_chips;
     delete[] d_Prompt_buffer;
       
     engClose(d_ep);  //Close Matlab engine.
-    
-    //Destruction mxArray CORR
-    mxDestroyArray(d_CORR);
+    mxDestroyArray(d_CORR); //Destruction mxArray CORR
 }
 
 
@@ -607,7 +616,7 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
         {
             // MULTIPLEXED FILE RECORDING - Record results to file
 
-            //std::cout << "d_num_correlators set to " << d_num_correlators << std::endl;
+            //std::cout << "d_num_oneside_correlators set to " << d_num_oneside_correlators << std::endl;
             float prompt_I;
             float prompt_Q;
             float tmp_E, tmp_P, tmp_L;
@@ -624,17 +633,22 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
             //si el modulo es cero, entonces es multiplo  
                 if(matlab_count%100 == 0)
                 {
-                    std::cout << "matlab_count = " << matlab_count << std::endl;
+                    //std::cout << "matlab_count = " << matlab_count << std::endl;
                     mxArray *m_count = mxCreateDoubleMatrix(1, 1, mxREAL);
                     double tmp_m_count;
                     tmp_m_count = static_cast<double>(matlab_count);
-                    std::cout << "tmp_m_count = " << tmp_m_count << std::endl;
+                    //std::cout << "tmp_m_count = " << tmp_m_count << std::endl;
                     memcpy(mxGetPr(m_count), &tmp_m_count, sizeof(double));
                     engPutVariable(d_ep, "mat_count", m_count);
 
+                    mxArray *m_channel = mxCreateDoubleMatrix(1, 1, mxREAL);
+                    double tmp_m_channel;
+                    tmp_m_channel = static_cast<double>(d_channel);
+                    memcpy(mxGetPr(m_channel), &tmp_m_channel, sizeof(double));
+                    engPutVariable(d_ep, "mat_channel", m_channel);
 
-                    //double tmp_corr[d_num_correlators];
-                    double *tmp_corr = new double [d_num_correlators];
+                    //double tmp_corr[d_num_oneside_correlators];
+                    double *tmp_corr = new double [d_num_oneside_correlators];
 
 
                     //double *d_pas_cor =  mxGetPr(d_CORR);
@@ -653,18 +667,18 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
                     //tmp_corr[2] = static_cast<double>(d_sample_counter + 20);           
 
                     //Copy the c ++ array of value to the corresponding mxArray 
-                    memcpy(mxGetPr(d_CORR), tmp_corr, d_num_correlators*sizeof(double));
+                    memcpy(mxGetPr(d_CORR), tmp_corr, d_num_oneside_correlators*sizeof(double));
 
 
                     //MxArray array will be written to the Matlab workspace 
                     engPutVariable(d_ep, "corr", d_CORR);
 
                     //Matlab engine sends drawing commands. 
-                    engEvalString(d_ep, "plot(corr,'-.s'); grid on; title(sprintf('matlab_count = %0.1f',mat_count));");  
+                    engEvalString(d_ep, "plot(corr,'-.s'); grid on; title(sprintf('Tracking channel: %u \t Number of codes = %0.1f',mat_channel,mat_count));");  
             
                     delete tmp_corr;
                     mxDestroyArray(m_count);
-
+                    mxDestroyArray(m_channel);
             
                 }
             }

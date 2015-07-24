@@ -74,8 +74,8 @@ gps_l1_ca_dll_fll_pll_dpe_make_tracking_cc(
         float fll_bw_hz,
         float pll_bw_hz,
         float dll_bw_hz,
-        unsigned int num_correlators,
-        float correlators_space_chips);
+        unsigned int num_oneside_correlators,
+        float *correlators_space_chips);
 
 
 /*!
@@ -120,8 +120,8 @@ private:
             float fll_bw_hz,
             float pll_bw_hz,
             float dll_bw_hz,
-            unsigned int num_correlators,
-            float correlators_space_chips);
+            unsigned int num_oneside_correlators,
+            float *correlators_space_chips);
 
     Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
             long if_freq,
@@ -134,8 +134,8 @@ private:
             float fll_bw_hz,
             float pll_bw_hz,
             float dll_bw_hz,
-            unsigned int num_correlators,
-            float correlators_space_chips);
+            unsigned int num_oneside_correlators,
+            float *correlators_space_chips);
 
     void CN0_estimation_and_lock_detectors();
 
@@ -164,9 +164,9 @@ private:
 
     gr_complex d_Prompt_prev;
 
-    unsigned int d_num_correlators;
+    unsigned int d_num_oneside_correlators;
 
-    double d_correlators_space_chips;
+    double *d_correlators_space_chips;
 
     double d_carrier_doppler_hz;
     double d_code_freq_hz;

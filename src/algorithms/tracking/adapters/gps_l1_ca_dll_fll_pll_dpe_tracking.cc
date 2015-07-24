@@ -42,7 +42,8 @@
 #include <glog/logging.h>
 #include "GPS_L1_CA.h"
 #include "configuration_interface.h"
-//#include <iostream> // only for debugging
+#include <boost/lexical_cast.hpp>
+#include <iostream> // only for debugging
 
 
 using google::LogMessage;
@@ -70,8 +71,8 @@ GpsL1CaDllFllPllDpeTracking::GpsL1CaDllFllPllDpeTracking(
     float pll_bw_hz;
     float fll_bw_hz;
     float dll_bw_hz;
-    unsigned int num_correlators;
-    float correlators_space_chips;
+    unsigned int num_oneside_correlators;
+    float *correlators_space_chips;
     int order;
     item_type = configuration->property(role + ".item_type",default_item_type);
     //vector_length = configuration->property(role + ".vector_length", 2048);
@@ -83,8 +84,18 @@ GpsL1CaDllFllPllDpeTracking::GpsL1CaDllFllPllDpeTracking(
     pll_bw_hz = configuration->property(role + ".pll_bw_hz", 50.0);
     fll_bw_hz = configuration->property(role + ".fll_bw_hz", 100.0);
     dll_bw_hz = configuration->property(role + ".dll_bw_hz", 2.0);
-    num_correlators = configuration->property(role + ".number_of_correlators", 3);
-    correlators_space_chips = configuration->property(role + ".correlators_space_chips", 0.5);
+    num_oneside_correlators = configuration->property(role + ".number_of_correlators", 3);
+    correlators_space_chips = new float[num_oneside_correlators];
+    for (unsigned int i=0; i < num_oneside_correlators; i++)
+        {
+            correlators_space_chips[i] = configuration->property(role + ".correlators_space_chips_" + boost::lexical_cast<std::string>(i), 0.5);
+        }
+    std::cout << "Constructor del adapter" << std::endl;
+    for (unsigned int i= 0; i < num_oneside_correlators; i++)
+        {
+            std::cout << " correlators_space_chips[" << i << "] = " << correlators_space_chips[i] << std::endl;
+        }
+
     std::string default_dump_filename = "./track_ch";
     dump_filename = configuration->property(role + ".dump_filename",
             default_dump_filename); //unused!
@@ -105,7 +116,7 @@ GpsL1CaDllFllPllDpeTracking::GpsL1CaDllFllPllDpeTracking(
                     fll_bw_hz,
                     pll_bw_hz,
                     dll_bw_hz,
-                    num_correlators,
+                    num_oneside_correlators,
                     correlators_space_chips);
         }
     else
