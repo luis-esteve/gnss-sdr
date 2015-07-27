@@ -125,7 +125,11 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
     d_vector_length = vector_length;
     d_num_oneside_correlators = num_oneside_correlators;
     d_correlators_space_chips = new double[d_num_oneside_correlators];
-    d_correlators_space_chips[0] = static_cast<double>(correlators_space_chips[0]); // Define correlators distance (in chips)
+    for(unsigned int i = 0; i < d_num_oneside_correlators; i++)
+    {
+        d_correlators_space_chips[i] = static_cast<double>(correlators_space_chips[i]); // Define correlators distance (in chips)
+    }
+    
     d_dump_filename = dump_filename;
 
     // Initialize tracking variables ==========================================
