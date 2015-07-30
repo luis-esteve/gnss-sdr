@@ -114,6 +114,7 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
         gr::block("Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc", gr::io_signature::make(1, 1, sizeof(gr_complex)),
                 gr::io_signature::make(1, 1, sizeof(Gnss_Synchro)))
 {
+    std::cout << "Constructor" << std::endl;
     // initialize internal vars
     d_queue = queue;
     d_dump = dump;
@@ -124,7 +125,11 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
     d_fs_in = static_cast<double>(fs_in);
     d_vector_length = vector_length;
     d_num_oneside_correlators = num_oneside_correlators;
+    d_num_correlators = 2*d_num_oneside_correlators + 1;
+    std::cout << "d_num_oneside_correlators = " << d_num_oneside_correlators << std::endl;
+    std::cout << "d_num_correlators = " << d_num_correlators << std::endl;
     d_correlators_space_chips = new double[d_num_oneside_correlators];
+    d_code_index = new unsigned int[d_num_correlators];
     for(unsigned int i = 0; i < d_num_oneside_correlators; i++)
     {
         d_correlators_space_chips[i] = static_cast<double>(correlators_space_chips[i]); // Define correlators distance (in chips)
@@ -139,12 +144,15 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
     d_code_loop_filter.set_DLL_BW(dll_bw_hz);
 
     // Get space for a vector with the C/A code replica sampled 1x/chip
-    d_ca_code = static_cast<gr_complex*>(volk_malloc((GPS_L1_CA_CODE_LENGTH_CHIPS + 2) * sizeof(gr_complex), volk_get_alignment()));
+    d_ca_code = static_cast<gr_complex*>(volk_malloc((3*GPS_L1_CA_CODE_LENGTH_CHIPS) * sizeof(gr_complex), volk_get_alignment()));
+
+    // Get space for the resampled replicas of multicorrelator
+    d_code = static_cast<gr_complex*>(volk_malloc(d_num_correlators*2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
 
     // Get space for the resampled early / prompt / late local replicas
-    d_early_code = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
-    d_prompt_code = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
-    d_late_code = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
+    // d_early_code = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
+    // d_prompt_code = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
+    // d_late_code = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
 
     // space for carrier wipeoff and signal baseband vectors
     d_carr_sign = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
@@ -153,7 +161,9 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
     d_Early = static_cast<gr_complex*>(volk_malloc(sizeof(gr_complex), volk_get_alignment()));
     d_Prompt = static_cast<gr_complex*>(volk_malloc(sizeof(gr_complex), volk_get_alignment()));
     d_Late = static_cast<gr_complex*>(volk_malloc(sizeof(gr_complex), volk_get_alignment()));
-
+    
+    d_output = static_cast<gr_complex*>(volk_malloc(d_num_correlators*sizeof(gr_complex), volk_get_alignment()));
+    
     // sample synchronization
     d_sample_counter = 0;
     d_acq_sample_stamp = 0;
@@ -195,7 +205,7 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
     d_ep=engOpen("\0"); //Start the Matlab engine.  
 
     //Defined mxArray, the array is one line of real numbers, N columns.
-    d_CORR = mxCreateDoubleMatrix(d_num_oneside_correlators, 1, mxREAL);
+    d_CORR = mxCreateDoubleMatrix(d_num_correlators, 1, mxREAL);
 
     matlab_count = 0;
 
@@ -210,6 +220,7 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
 
 void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::start_tracking()
 {
+    // std::cout << "Start tracking" << std::endl;
     /*
      *  correct the code phase according to the delay between acq and trk
      */
@@ -256,18 +267,17 @@ void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::start_tracking()
     d_carrier_loop_filter.initialize(d_acq_carrier_doppler_hz);
     d_FLL_wait = 1;
 
-    // generate local reference ALWAYS starting at chip 1 (1 sample per chip)
-    gps_l1_ca_code_gen_complex(&d_ca_code[1], d_acquisition_gnss_synchro->PRN, 0);
-
-    d_ca_code[0] = d_ca_code[static_cast<int>(GPS_L1_CA_CODE_LENGTH_CHIPS)];
-    d_ca_code[static_cast<int>(GPS_L1_CA_CODE_LENGTH_CHIPS) + 1] = d_ca_code[1];
+    // generate 3 local replicas reference (1 sample per chip)
+    int code_length_chips = static_cast<int>(GPS_L1_CA_CODE_LENGTH_CHIPS);
+    gps_l1_ca_code_gen_complex(&d_ca_code[0], d_acquisition_gnss_synchro->PRN, 0);
+    gps_l1_ca_code_gen_complex(&d_ca_code[code_length_chips], d_acquisition_gnss_synchro->PRN, 0);
+    gps_l1_ca_code_gen_complex(&d_ca_code[2*code_length_chips], d_acquisition_gnss_synchro->PRN, 0);
 
     d_carrier_lock_fail_counter = 0;
     d_Prompt_prev = 0;
     d_rem_code_phase_samples = 0;
     d_rem_carr_phase = 0;
     d_FLL_discriminator_hz = 0;
-    d_rem_code_phase_samples = 0;
     d_acc_carrier_phase_rad = 0;
 
     std::string sys_ = &d_acquisition_gnss_synchro->System;
@@ -292,11 +302,12 @@ void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::start_tracking()
 
 void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::update_local_code()
 {
+    // std::cout << "Update local code" << std::endl;
     double tcode_chips;
     double rem_code_phase_chips;
     double code_phase_step_chips;
-    int early_late_spc_samples;
-    int epl_loop_length_samples;
+    int early_late_spc_samples[d_num_oneside_correlators];
+    unsigned int correlator_loop_length_samples;
 
     int associated_chip_index;
     int code_length_chips = static_cast<int>(GPS_L1_CA_CODE_LENGTH_CHIPS);
@@ -305,17 +316,48 @@ void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::update_local_code()
     // unified loop for E, P, L code vectors
     tcode_chips = -rem_code_phase_chips;
     // Alternative EPL code generation (40% of speed improvement!)
-    early_late_spc_samples = round(d_correlators_space_chips[0]/code_phase_step_chips);
-    epl_loop_length_samples = d_current_prn_length_samples + early_late_spc_samples*2;
-    for (int i = 0; i < epl_loop_length_samples; i++)
+    for(unsigned int i =0; i < d_num_oneside_correlators; i++)
         {
-            associated_chip_index = 1 + round(fmod(tcode_chips - d_correlators_space_chips[0], code_length_chips));
-            d_early_code[i] = d_ca_code[associated_chip_index];
+            early_late_spc_samples[i] = round(d_correlators_space_chips[i]/code_phase_step_chips);
+        }
+    
+    correlator_loop_length_samples = d_current_prn_length_samples + early_late_spc_samples[d_num_oneside_correlators-1]*2;
+    // gr_complex code[correlator_loop_length_samples];
+    for (unsigned int i = 0; i < correlator_loop_length_samples; i++)
+        {
+            associated_chip_index = code_length_chips + round(fmod(tcode_chips - d_correlators_space_chips[d_num_oneside_correlators-1], code_length_chips));
+            d_code[i] = d_ca_code[associated_chip_index];
             tcode_chips = tcode_chips + code_phase_step_chips;
         }
 
-    memcpy(d_prompt_code,&d_early_code[early_late_spc_samples],d_current_prn_length_samples* sizeof(gr_complex));
-    memcpy(d_late_code,&d_early_code[early_late_spc_samples*2],d_current_prn_length_samples* sizeof(gr_complex));
+    d_code_index[0] = 0.0;
+
+    for(unsigned int i =0; i < d_num_oneside_correlators; i++)
+        {
+            d_code_index[i+1] = d_code_index[i] + early_late_spc_samples[d_num_oneside_correlators-1-i];
+        }
+
+    for(unsigned int i =0; i < d_num_oneside_correlators; i++)
+        {
+            d_code_index[d_num_oneside_correlators+i+1] = d_code_index[d_num_oneside_correlators+i] + early_late_spc_samples[i];
+        }
+
+    // for (unsigned int i = 0; i < d_num_correlators; i++)
+    // {
+    //     std::cout << "d_code_index[" << i << "] = " << d_code_index[i] << std::endl;
+    // }
+
+
+
+
+    
+    // for(unsigned int i =0; i < d_num_oneside_correlators; i++)
+    //     {
+    //         memcpy(d_code,&code[d_early_late_spc_samples[i]],d_current_prn_length_samples* sizeof(gr_complex));
+    //     }
+
+    // memcpy(d_prompt_code,&d_early_code[max_early_late_spc_samples],d_current_prn_length_samples* sizeof(gr_complex));
+    // memcpy(d_late_code,&d_early_code[max_early_late_spc_samples*2],d_current_prn_length_samples* sizeof(gr_complex));
 
     //    for (int i=0; i<d_current_prn_length_samples; i++)
     //        {
@@ -335,6 +377,7 @@ void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::update_local_code()
 
 void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::update_local_carrier()
 {
+    // std::cout << "Update local carrier" << std::endl;
     double phase, phase_step;
     phase_step = GPS_TWO_PI * d_carrier_doppler_hz / d_fs_in;
     phase = d_rem_carr_phase;
@@ -354,15 +397,18 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::~Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc()
     d_dump_file.close();
 
     volk_free(d_ca_code);
-    volk_free(d_prompt_code);
-    volk_free(d_late_code);
-    volk_free(d_early_code);
-    volk_free(d_carr_sign);
+    volk_free(d_code);
+    // volk_free(d_prompt_code);
+    // volk_free(d_late_code);
+    // volk_free(d_early_code);
+    // volk_free(d_carr_sign);
+    volk_free(d_output);
     volk_free(d_Early);
     volk_free(d_Prompt);
     volk_free(d_Late);
 
     delete[] d_correlators_space_chips;
+    delete[] d_code_index;
     delete[] d_Prompt_buffer;
       
     engClose(d_ep);  //Close Matlab engine.
@@ -375,6 +421,7 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::~Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc()
 int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_vector_int &ninput_items,
         gr_vector_const_void_star &input_items, gr_vector_void_star &output_items)
 {
+    // std::cout << "General work" << std::endl;
     double code_error_chips = 0;
     double code_error_filt_chips = 0;
     double correlation_time_s = 0;
@@ -386,8 +433,11 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
 
     d_Prompt_prev = *d_Prompt; // for the FLL discriminator
 
+    // std::cout << "Antes del primer if" << std::endl;
+
     if (d_enable_tracking == true)
         {
+            // std::cout << "d_enable_tracking == true" << std::endl;
             // GNSS_SYNCHRO OBJECT to interchange data between tracking->telemetry_decoder
             Gnss_Synchro current_synchro_data;
             // Fill the acquisition data
@@ -397,6 +447,7 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
              */
             if (d_pull_in == true)
                 {
+                    // std::cout << "d_pull_in == true" << std::endl;                
                     int samples_offset;
                     double acq_trk_shif_correction_samples;
                     int acq_to_trk_delay_samples;
@@ -422,20 +473,35 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
 
                     return 1;
                 }
-
+            // std::cout << "Antes de updates" << std::endl;
             update_local_code();
             update_local_carrier();
 
             // perform Early, Prompt and Late correlation
-            d_correlator.Carrier_wipeoff_and_EPL_volk(d_current_prn_length_samples,
+
+            // d_correlator.Carrier_wipeoff_and_EPL_volk(d_current_prn_length_samples,
+            //         in,
+            //         d_carr_sign,
+            //         d_early_code,
+            //         d_prompt_code,
+            //         d_late_code,
+            //         d_Early,
+            //         d_Prompt,
+            //         d_Late);
+            // std::cout << "Supera los updates" << std::endl;
+            d_correlator.Carrier_wipeoff_and_multiEPL_volk(d_current_prn_length_samples,
                     in,
                     d_carr_sign,
-                    d_early_code,
-                    d_prompt_code,
-                    d_late_code,
-                    d_Early,
-                    d_Prompt,
-                    d_Late);
+                    d_code,
+                    d_num_correlators,
+                    d_code_index,
+                    d_output);
+
+            *d_Early = d_output[2];
+            *d_Prompt = d_output[3];
+            *d_Late = d_output[4];
+
+
             // check for samples consistency (this should be done before in the receiver / here only if the source is a file)
             if (std::isnan((*d_Prompt).real()) == true or std::isnan((*d_Prompt).imag()) == true )// or std::isinf(in[i].real())==true or std::isinf(in[i].imag())==true)
                 {
@@ -590,6 +656,7 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
         }
     else
         {
+            // std::cout << "d_enable_tracking == false" << std::endl;
 			// ########## DEBUG OUTPUT (TIME ONLY for channel 0 when tracking is disabled)
 			/*!
 			 *  \todo The stop timer has to be moved to the signal source!
@@ -611,11 +678,19 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
             *d_Prompt = gr_complex(0,0);
             *d_Late   = gr_complex(0,0);
 
+            // std::cout << "Antes de llenar d_output de ceros" << std::endl;
+            // std::cout << "d_num_correlators = " <<  d_num_correlators << std::endl;
+
+            for (unsigned int i = 0; i < d_num_correlators; i++)
+            {
+                d_output[i] = gr_complex(0,0);
+            }
+
             Gnss_Synchro **out = (Gnss_Synchro **) &output_items[0]; //block output streams pointer
             d_acquisition_gnss_synchro->Flag_valid_pseudorange = false;
             *out[0] = *d_acquisition_gnss_synchro;
         }
-
+    // std::cout << "sale del else" << std::endl;
     if(d_dump)
         {
             // MULTIPLEXED FILE RECORDING - Record results to file
@@ -631,12 +706,20 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
             tmp_E = std::abs<float>(*d_Early);
             tmp_P = std::abs<float>(*d_Prompt);
             tmp_L = std::abs<float>(*d_Late);
+            float tmp_out[d_num_correlators];
+
+            for (unsigned int i = 0; i < d_num_correlators; i++)
+                {
+                    tmp_out[i] = std::abs<float>(d_output[i]);
+                }
             
             if(matlab_count >= 100)
             {  
             //si el modulo es cero, entonces es multiplo  
                 if(matlab_count%100 == 0)
                 {
+                    
+
                     //std::cout << "matlab_count = " << matlab_count << std::endl;
                     mxArray *m_count = mxCreateDoubleMatrix(1, 1, mxREAL);
                     double tmp_m_count;
@@ -651,38 +734,43 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
                     memcpy(mxGetPr(m_channel), &tmp_m_channel, sizeof(double));
                     engPutVariable(d_ep, "mat_channel", m_channel);
 
-                    //double tmp_corr[d_num_oneside_correlators];
-                    double *tmp_corr = new double [d_num_oneside_correlators];
+                    mxArray *m_index = mxCreateDoubleMatrix(d_num_correlators, 1, mxREAL);
+                    double *tmp_m_index = new double [d_num_correlators];
+                    for (unsigned int i = 0; i < d_num_correlators; i++)
+                    {
+                        tmp_m_index[i] = static_cast<double>(d_code_index[i]);
+                    }
+                    
+                    memcpy(mxGetPr(m_index), tmp_m_index, d_num_correlators*sizeof(double));
+                    engPutVariable(d_ep, "mat_index", m_index);
 
 
-                    //double *d_pas_cor =  mxGetPr(d_CORR);
+
+                    double *tmp_corr = new double [d_num_correlators];
+
+
             
                     // Copy the correlators value to a vector 
-                    tmp_corr[0] = static_cast<double>(tmp_E);
-                    tmp_corr[1] = static_cast<double>(tmp_P);
-                    tmp_corr[2] = static_cast<double>(tmp_L);
-        
-                    //d_pas_cor[0] = tmp_corr[0];
-                    //d_pas_cor[1] = tmp_corr[1];
-                    //d_pas_cor[2] = tmp_corr[2];
-            
-                    //tmp_corr[0] = static_cast<double>(d_sample_counter);
-                    //tmp_corr[1] = static_cast<double>(d_sample_counter + 10);
-                    //tmp_corr[2] = static_cast<double>(d_sample_counter + 20);           
+                    for (unsigned int i = 0; i < d_num_correlators; i++)
+                    {
+                        tmp_corr[i] = static_cast<double>(tmp_out[i]);
+                    }
 
                     //Copy the c ++ array of value to the corresponding mxArray 
-                    memcpy(mxGetPr(d_CORR), tmp_corr, d_num_oneside_correlators*sizeof(double));
+                    memcpy(mxGetPr(d_CORR), tmp_corr, d_num_correlators*sizeof(double));
 
 
                     //MxArray array will be written to the Matlab workspace 
                     engPutVariable(d_ep, "corr", d_CORR);
 
                     //Matlab engine sends drawing commands. 
-                    engEvalString(d_ep, "plot(corr,'-.s'); grid on; title(sprintf('Tracking channel: %u \t Number of codes = %0.1f',mat_channel,mat_count));");  
+                    engEvalString(d_ep, "plot(mat_index, corr,'-.s'); grid on; title(sprintf('Tracking channel: %u \t Number of codes = %0.1f',mat_channel,mat_count));");  
             
                     delete tmp_corr;
+                    delete tmp_m_index;
                     mxDestroyArray(m_count);
                     mxDestroyArray(m_channel);
+                    mxDestroyArray(m_index);
             
                 }
             }

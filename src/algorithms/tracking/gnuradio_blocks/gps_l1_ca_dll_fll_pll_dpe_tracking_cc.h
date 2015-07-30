@@ -152,11 +152,11 @@ private:
 
     gr_complex* d_ca_code;
 
-    gr_complex* d_early_code;
-    gr_complex* d_late_code;
-    gr_complex* d_prompt_code;
+    gr_complex* d_code;
 
     gr_complex* d_carr_sign;
+
+    gr_complex* d_output;
 
     gr_complex* d_Early;
     gr_complex* d_Prompt;
@@ -165,8 +165,11 @@ private:
     gr_complex d_Prompt_prev;
 
     unsigned int d_num_oneside_correlators;
+    unsigned int d_num_correlators;
 
     double *d_correlators_space_chips;
+    
+    unsigned int *d_code_index;
 
     double d_carrier_doppler_hz;
     double d_code_freq_hz;

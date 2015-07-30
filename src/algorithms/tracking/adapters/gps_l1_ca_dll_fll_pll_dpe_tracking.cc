@@ -84,7 +84,7 @@ GpsL1CaDllFllPllDpeTracking::GpsL1CaDllFllPllDpeTracking(
     pll_bw_hz = configuration->property(role + ".pll_bw_hz", 50.0);
     fll_bw_hz = configuration->property(role + ".fll_bw_hz", 100.0);
     dll_bw_hz = configuration->property(role + ".dll_bw_hz", 2.0);
-    num_oneside_correlators = configuration->property(role + ".number_of_correlators", 3);
+    num_oneside_correlators = configuration->property(role + ".number_of_oneside_correlators", 3);
     correlators_space_chips = new float[num_oneside_correlators];
     for (unsigned int i=0; i < num_oneside_correlators; i++)
         {

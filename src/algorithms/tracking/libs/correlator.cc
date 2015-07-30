@@ -135,7 +135,19 @@ void Correlator::Carrier_wipeoff_and_VEPL_volk(int signal_length_samples, const 
     volk_free(bb_signal);
 }
 
+void Correlator::Carrier_wipeoff_and_multiEPL_volk(int signal_length_samples, const gr_complex* input, gr_complex* carrier, gr_complex* code, unsigned int num_correlators, unsigned int *index, gr_complex* out)
+{
+    gr_complex* bb_signal = static_cast<gr_complex*>(volk_malloc(signal_length_samples * sizeof(gr_complex), volk_get_alignment()));
 
+    volk_32fc_x2_multiply_32fc(bb_signal, input, carrier, signal_length_samples);
+
+    for(unsigned int i = 0; i < num_correlators; i++)
+    {
+        volk_32fc_x2_dot_prod_32fc(&out[i], bb_signal, &code[index[i]], signal_length_samples);
+    }
+    
+    volk_free(bb_signal);
+}
 
 Correlator::Correlator ()
 {}
