@@ -73,6 +73,7 @@ GpsL1CaDllFllPllMulticorrelatorTracking::GpsL1CaDllFllPllMulticorrelatorTracking
     float dll_bw_hz;
     unsigned int num_oneside_correlators;
     float *correlators_space_chips;
+    unsigned int el_index;
     int order;
     item_type = configuration->property(role + ".item_type",default_item_type);
     //vector_length = configuration->property(role + ".vector_length", 2048);
@@ -95,7 +96,8 @@ GpsL1CaDllFllPllMulticorrelatorTracking::GpsL1CaDllFllPllMulticorrelatorTracking
         {
             std::cout << " correlators_space_chips[" << i << "] = " << correlators_space_chips[i] << std::endl;
         }
-
+    el_index = configuration->property(role + ".correlators_EL_index", 0);
+    std::cout << "EL index = " << el_index << std::endl;
     std::string default_dump_filename = "./track_ch";
     dump_filename = configuration->property(role + ".dump_filename",
             default_dump_filename); //unused!
@@ -117,7 +119,8 @@ GpsL1CaDllFllPllMulticorrelatorTracking::GpsL1CaDllFllPllMulticorrelatorTracking
                     pll_bw_hz,
                     dll_bw_hz,
                     num_oneside_correlators,
-                    correlators_space_chips);
+                    correlators_space_chips,
+                    el_index);
         }
     else
         {

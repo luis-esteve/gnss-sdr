@@ -75,7 +75,8 @@ gps_l1_ca_dll_fll_pll_multicorrelator_make_tracking_cc(
         float pll_bw_hz,
         float dll_bw_hz,
         unsigned int num_oneside_correlators,
-        float *correlators_space_chips);
+        float *correlators_space_chips,
+        unsigned int el_index);
 
 
 /*!
@@ -121,7 +122,8 @@ private:
             float pll_bw_hz,
             float dll_bw_hz,
             unsigned int num_oneside_correlators,
-            float *correlators_space_chips);
+            float *correlators_space_chips,
+            unsigned int el_index);
 
     Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc(
             long if_freq,
@@ -135,7 +137,8 @@ private:
             float pll_bw_hz,
             float dll_bw_hz,
             unsigned int num_oneside_correlators,
-            float *correlators_space_chips);
+            float *correlators_space_chips,
+            unsigned int el_index);
 
     void CN0_estimation_and_lock_detectors();
 
@@ -170,6 +173,8 @@ private:
     double *d_correlators_space_chips;
     
     unsigned int *d_code_index;
+
+    unsigned int d_el_index;
 
     double d_carrier_doppler_hz;
     double d_code_freq_hz;

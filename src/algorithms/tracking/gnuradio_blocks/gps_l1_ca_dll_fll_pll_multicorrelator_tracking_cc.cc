@@ -76,7 +76,8 @@ gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc_sptr gps_l1_ca_dll_fll_pll_mul
         float pll_bw_hz,
         float dll_bw_hz,
         unsigned int num_oneside_correlators,
-        float *correlators_space_chips)
+        float *correlators_space_chips,
+        unsigned int el_index)
 {
 std::cout << "make del bloque gnu" << std::endl;
 for (unsigned int i= 0; i < num_oneside_correlators; i++)
@@ -85,7 +86,7 @@ for (unsigned int i= 0; i < num_oneside_correlators; i++)
         }
     return gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc_sptr(new Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc(if_freq,
             fs_in, vector_length, queue, dump, dump_filename, order, fll_bw_hz, pll_bw_hz,dll_bw_hz,
-            num_oneside_correlators, correlators_space_chips));
+            num_oneside_correlators, correlators_space_chips, el_index));
 }
 
 
@@ -109,7 +110,8 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multico
         float pll_bw_hz,
         float dll_bw_hz,
         unsigned int num_oneside_correlators,
-        float *correlators_space_chips) :
+        float *correlators_space_chips,
+        unsigned int el_index) :
         gr::block("Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc", gr::io_signature::make(1, 1, sizeof(gr_complex)),
                 gr::io_signature::make(1, 1, sizeof(Gnss_Synchro)))
 {
@@ -133,7 +135,8 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multico
     {
         d_correlators_space_chips[i] = static_cast<double>(correlators_space_chips[i]); // Define correlators distance (in chips)
     }
-    
+    d_el_index = el_index;
+    std::cout << "d_el_index = " << d_el_index << std::endl;
     d_dump_filename = dump_filename;
 
     // Initialize tracking variables ==========================================
@@ -496,9 +499,9 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
                     d_code_index,
                     d_output);
 
-            *d_Early = d_output[2];
-            *d_Prompt = d_output[3];
-            *d_Late = d_output[4];
+            *d_Early = d_output[d_num_oneside_correlators-d_el_index-1];
+            *d_Prompt = d_output[d_num_oneside_correlators];
+            *d_Late = d_output[d_num_oneside_correlators+d_el_index+1];
 
 
             // check for samples consistency (this should be done before in the receiver / here only if the source is a file)
