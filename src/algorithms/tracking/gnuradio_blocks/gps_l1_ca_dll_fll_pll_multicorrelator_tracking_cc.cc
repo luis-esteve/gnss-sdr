@@ -1,11 +1,11 @@
 /*!
- * \file gps_l1_ca_dll_fll_pll_dpe_tracking_cc.cc
+ * \file gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc.cc
  * \brief GNU Radio block of a DLL + carrier FLL/PLL tracking
- * loop used in Direct Position Estimation for GPS L1 C/A to a 
- * TrackingInterface
+ * loop with multiple correlators for GPS L1 C/A 
+ *
  * \author Luis Esteve, 2015. luis.esteve.elfau(at)gmail.com
  *
- * This is the GNU Radio block of a code Delay Locked Loop (DLL) + carrier
+ * This is the GNU Radio block  of a code Delay Locked Loop (DLL) + carrier
  * Phase Locked Loop (PLL) helped with a carrier Frequency Locked Loop (FLL)
  * according to the algorithms described in:
  * E.D. Kaplan and C. Hegarty, Understanding GPS. Principles and
@@ -14,7 +14,6 @@
  * order to use it in Direct Position Estimation
  *
  * -------------------------------------------------------------------------
- *
  * Copyright (C) 2010-2015  (see AUTHORS file for a list of contributors)
  *
  * GNSS-SDR is a software defined Global Navigation
@@ -38,7 +37,7 @@
  * -------------------------------------------------------------------------
  */
 
-#include "gps_l1_ca_dll_fll_pll_dpe_tracking_cc.h"
+#include "gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc.h"
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -65,7 +64,7 @@
 
 using google::LogMessage;
 
-gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr gps_l1_ca_dll_fll_pll_dpe_make_tracking_cc(
+gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc_sptr gps_l1_ca_dll_fll_pll_multicorrelator_make_tracking_cc(
         long if_freq,
         long fs_in,
         unsigned
@@ -84,7 +83,7 @@ for (unsigned int i= 0; i < num_oneside_correlators; i++)
         {
             std::cout << " correlators_space_chips[" << i << "] = " << correlators_space_chips[i] << std::endl;
         }
-    return gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr(new Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(if_freq,
+    return gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc_sptr(new Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc(if_freq,
             fs_in, vector_length, queue, dump, dump_filename, order, fll_bw_hz, pll_bw_hz,dll_bw_hz,
             num_oneside_correlators, correlators_space_chips));
 }
@@ -92,13 +91,13 @@ for (unsigned int i= 0; i < num_oneside_correlators; i++)
 
 
 
-void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::forecast (int noutput_items, gr_vector_int &ninput_items_required)
+void Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::forecast (int noutput_items, gr_vector_int &ninput_items_required)
 {
     ninput_items_required[0] = d_vector_length * 2; //set the required available samples in each call
 }
 
 
-Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
+Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc(
         long if_freq,
         long fs_in,
         unsigned int vector_length,
@@ -111,7 +110,7 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
         float dll_bw_hz,
         unsigned int num_oneside_correlators,
         float *correlators_space_chips) :
-        gr::block("Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc", gr::io_signature::make(1, 1, sizeof(gr_complex)),
+        gr::block("Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc", gr::io_signature::make(1, 1, sizeof(gr_complex)),
                 gr::io_signature::make(1, 1, sizeof(Gnss_Synchro)))
 {
     std::cout << "Constructor" << std::endl;
@@ -218,7 +217,7 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
 
 
 
-void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::start_tracking()
+void Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::start_tracking()
 {
     // std::cout << "Start tracking" << std::endl;
     /*
@@ -300,7 +299,7 @@ void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::start_tracking()
 
 
 
-void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::update_local_code()
+void Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::update_local_code()
 {
     // std::cout << "Update local code" << std::endl;
     double tcode_chips;
@@ -375,7 +374,7 @@ void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::update_local_code()
 
 
 
-void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::update_local_carrier()
+void Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::update_local_carrier()
 {
     // std::cout << "Update local carrier" << std::endl;
     double phase, phase_step;
@@ -392,7 +391,7 @@ void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::update_local_carrier()
 
 
 
-Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::~Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc()
+Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::~Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc()
 {
     d_dump_file.close();
 
@@ -418,7 +417,7 @@ Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::~Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc()
 
 
 
-int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_vector_int &ninput_items,
+int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput_items, gr_vector_int &ninput_items,
         gr_vector_const_void_star &input_items, gr_vector_void_star &output_items)
 {
     // std::cout << "General work" << std::endl;
@@ -842,7 +841,7 @@ int Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::general_work (int noutput_items, gr_v
 }
 
 
-void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::set_channel(unsigned int channel)
+void Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::set_channel(unsigned int channel)
 {
     d_channel = channel;
     LOG(INFO) << "Tracking Channel set to " << d_channel;
@@ -869,12 +868,12 @@ void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::set_channel(unsigned int channel)
 
 
 
-void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::set_channel_queue(concurrent_queue<int> *channel_internal_queue)
+void Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::set_channel_queue(concurrent_queue<int> *channel_internal_queue)
 {
     d_channel_internal_queue = channel_internal_queue;
 }
 
-void Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc::set_gnss_synchro(Gnss_Synchro* p_gnss_synchro)
+void Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::set_gnss_synchro(Gnss_Synchro* p_gnss_synchro)
 {
     d_acquisition_gnss_synchro=p_gnss_synchro;
 }

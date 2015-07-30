@@ -1,8 +1,8 @@
 /*!
- * \file gps_l1_ca_dll_fll_pll_dpe_tracking.cc
+ * \file gps_l1_ca_dll_fll_pll_multicorrelator_tracking.cc
  * \brief Interface of an adapter of a code DLL + carrier FLL/PLL tracking
- * loop used in Direct Position Estimation for GPS L1 C/A to a 
- * TrackingInterface
+ * loop with multiple correlators for GPS L1 C/A to a TrackingInterface
+ *
  * \author Luis Esteve, 2015. luis.esteve.elfau(at)gmail.com
  *
  * This is the interface of a code Delay Locked Loop (DLL) + carrier
@@ -38,7 +38,7 @@
  * -------------------------------------------------------------------------
  */
 
-#include "gps_l1_ca_dll_fll_pll_dpe_tracking.h"
+#include "gps_l1_ca_dll_fll_pll_multicorrelator_tracking.h"
 #include <glog/logging.h>
 #include "GPS_L1_CA.h"
 #include "configuration_interface.h"
@@ -48,7 +48,7 @@
 
 using google::LogMessage;
 
-GpsL1CaDllFllPllDpeTracking::GpsL1CaDllFllPllDpeTracking(
+GpsL1CaDllFllPllMulticorrelatorTracking::GpsL1CaDllFllPllMulticorrelatorTracking(
         ConfigurationInterface* configuration,
         std::string role,
         unsigned int in_streams, unsigned int
@@ -105,7 +105,7 @@ GpsL1CaDllFllPllDpeTracking::GpsL1CaDllFllPllDpeTracking(
     if (item_type.compare("gr_complex") == 0)
         {
             item_size_ = sizeof(gr_complex);
-            tracking_ = gps_l1_ca_dll_fll_pll_dpe_make_tracking_cc(
+            tracking_ = gps_l1_ca_dll_fll_pll_multicorrelator_make_tracking_cc(
                     f_if,
                     fs_in,
                     vector_length,
@@ -131,51 +131,51 @@ GpsL1CaDllFllPllDpeTracking::GpsL1CaDllFllPllDpeTracking(
 }
 
 
-GpsL1CaDllFllPllDpeTracking::~GpsL1CaDllFllPllDpeTracking()
+GpsL1CaDllFllPllMulticorrelatorTracking::~GpsL1CaDllFllPllMulticorrelatorTracking()
 {}
 
 
-void GpsL1CaDllFllPllDpeTracking::start_tracking()
+void GpsL1CaDllFllPllMulticorrelatorTracking::start_tracking()
 {
     tracking_->start_tracking();
 }
 
-void GpsL1CaDllFllPllDpeTracking::set_channel(unsigned int channel)
+void GpsL1CaDllFllPllMulticorrelatorTracking::set_channel(unsigned int channel)
 {
     channel_ = channel;
     tracking_->set_channel(channel);
 }
 
-void GpsL1CaDllFllPllDpeTracking::set_channel_queue(
+void GpsL1CaDllFllPllMulticorrelatorTracking::set_channel_queue(
         concurrent_queue<int> *channel_internal_queue)
 {
     channel_internal_queue_ = channel_internal_queue;
     tracking_->set_channel_queue(channel_internal_queue_);
 }
 
-void GpsL1CaDllFllPllDpeTracking::set_gnss_synchro(Gnss_Synchro* p_gnss_synchro)
+void GpsL1CaDllFllPllMulticorrelatorTracking::set_gnss_synchro(Gnss_Synchro* p_gnss_synchro)
 {
     return tracking_->set_gnss_synchro(p_gnss_synchro);
 }
 
-void GpsL1CaDllFllPllDpeTracking::connect(gr::top_block_sptr top_block)
+void GpsL1CaDllFllPllMulticorrelatorTracking::connect(gr::top_block_sptr top_block)
 {
 	if(top_block) { /* top_block is not null */};
 	//nothing to connect, now the tracking uses gr_sync_decimator
 }
 
-void GpsL1CaDllFllPllDpeTracking::disconnect(gr::top_block_sptr top_block)
+void GpsL1CaDllFllPllMulticorrelatorTracking::disconnect(gr::top_block_sptr top_block)
 {
 	if(top_block) { /* top_block is not null */};
 	//nothing to disconnect, now the tracking uses gr_sync_decimator
 }
 
-gr::basic_block_sptr GpsL1CaDllFllPllDpeTracking::get_left_block()
+gr::basic_block_sptr GpsL1CaDllFllPllMulticorrelatorTracking::get_left_block()
 {
     return tracking_;
 }
 
-gr::basic_block_sptr GpsL1CaDllFllPllDpeTracking::get_right_block()
+gr::basic_block_sptr GpsL1CaDllFllPllMulticorrelatorTracking::get_right_block()
 {
     return tracking_;
 }

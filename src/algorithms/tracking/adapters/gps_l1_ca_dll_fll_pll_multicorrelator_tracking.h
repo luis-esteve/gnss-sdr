@@ -1,8 +1,8 @@
 /*!
- * \file gps_l1_ca_dll_fll_pll_dpe_tracking.h
+ * \file gps_l1_ca_dll_fll_pll_multicorrelator_tracking.h
  * \brief Interface of an adapter of a code DLL + carrier FLL/PLL tracking
- * loop used in Direct Position Estimation for GPS L1 C/A to a 
- * TrackingInterface
+ * loop with multiple correlators for GPS L1 C/A to a TrackingInterface
+ *
  * \author Luis Esteve, 2015. luis.esteve.elfau(at)gmail.com
  *
  * This is the interface of a code Delay Locked Loop (DLL) + carrier
@@ -38,13 +38,13 @@
  * -------------------------------------------------------------------------
  */
 
-#ifndef GNSS_SDR_GPS_L1_CA_DLL_FLL_PLL_DPE_TRACKING_H_
-#define GNSS_SDR_GPS_L1_CA_DLL_FLL_PLL_DPE_TRACKING_H_
+#ifndef GNSS_SDR_GPS_L1_CA_DLL_FLL_PLL_MULTICORRELATOR_TRACKING_H_
+#define GNSS_SDR_GPS_L1_CA_DLL_FLL_PLL_MULTICORRELATOR_TRACKING_H_
 
 #include <string>
 #include <gnuradio/msg_queue.h>
 #include "tracking_interface.h"
-#include "gps_l1_ca_dll_fll_pll_dpe_tracking_cc.h"
+#include "gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc.h"
 
 
 class ConfigurationInterface;
@@ -52,26 +52,26 @@ class ConfigurationInterface;
 /*!
  * \brief This class implements a code DLL + carrier PLL/FLL Assisted tracking loop
  */
-class GpsL1CaDllFllPllDpeTracking : public TrackingInterface
+class GpsL1CaDllFllPllMulticorrelatorTracking : public TrackingInterface
 {
 public:
-  GpsL1CaDllFllPllDpeTracking(ConfigurationInterface* configuration,
+  GpsL1CaDllFllPllMulticorrelatorTracking(ConfigurationInterface* configuration,
             std::string role,
             unsigned int in_streams,
             unsigned int out_streams,
             boost::shared_ptr<gr::msg_queue> queue);
 
-    virtual ~GpsL1CaDllFllPllDpeTracking();
+    virtual ~GpsL1CaDllFllPllMulticorrelatorTracking();
 
     std::string role()
     {
         return role_;
     }
 
-    //! Returns "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking"
+    //! Returns "GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking"
     std::string implementation()
     {
-        return "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking";
+        return "GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking";
     }
     size_t item_size()
     {
@@ -89,7 +89,7 @@ public:
     void start_tracking();
 
 private:
-    gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr tracking_;
+    gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc_sptr tracking_;
     size_t item_size_;
     unsigned int channel_;
     std::string role_;
@@ -99,4 +99,4 @@ private:
     concurrent_queue<int> *channel_internal_queue_;
 };
 
-#endif // GPS_L1_CA_DLL_FLL_PLL_DPE_TRACKING_H_
+#endif // GPS_L1_CA_DLL_FLL_PLL_MULTICORRELATOR_TRACKING_H_

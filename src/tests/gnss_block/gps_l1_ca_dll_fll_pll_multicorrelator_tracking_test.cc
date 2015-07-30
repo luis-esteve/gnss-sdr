@@ -1,7 +1,7 @@
 /*!
- * \file gps_l1_ca_dll_fll_pll_dpe_tracking_test.cc
+ * \file gps_l1_ca_dll_fll_pll_multicorrelator_tracking_test.cc
  * \brief  This class implements a tracking test for 
- *  GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking implementation
+ *  GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking implementation
  *  based on some input parameters.
  * \author Luis Esteve, 2015. luis.esteve.elfau(at)gmail.com
  *
@@ -47,13 +47,13 @@
 #include "in_memory_configuration.h"
 #include "gnss_sdr_valve.h"
 #include "gnss_synchro.h"
-#include "gps_l1_ca_dll_fll_pll_dpe_tracking.h"
+#include "gps_l1_ca_dll_fll_pll_multicorrelator_tracking.h"
 
 
-class GpsL1CaDllFllPllDpeTrackingInternalTest: public ::testing::Test
+class GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest: public ::testing::Test
 {
 protected:
-    GpsL1CaDllFllPllDpeTrackingInternalTest()
+    GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest()
     {
         factory = std::make_shared<GNSSBlockFactory>();
         config = std::make_shared<InMemoryConfiguration>();
@@ -63,7 +63,7 @@ protected:
         gnss_synchro = Gnss_Synchro();
     }
 
-    ~GpsL1CaDllFllPllDpeTrackingInternalTest()
+    ~GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest()
     {}
 
     void init();
@@ -80,7 +80,7 @@ protected:
 };
 
 
-void GpsL1CaDllFllPllDpeTrackingInternalTest::init()
+void GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest::init()
 {
     gnss_synchro.Channel_ID = 0;
     gnss_synchro.System = 'G';
@@ -90,9 +90,9 @@ void GpsL1CaDllFllPllDpeTrackingInternalTest::init()
 
     config->set_property("GNSS-SDR.internal_fs_hz", "4000000");
     config->set_property("Tracking.item_type", "gr_complex");
-    config->set_property("Tracking.dump", "true");
-    config->set_property("Tracking.dump_filename", "../data/dpe_tracking_ch_");
-    config->set_property("Tracking.implementation", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking");
+    config->set_property("Tracking.dump", "false");
+    config->set_property("Tracking.dump_filename", "../data/multicorrelator_tracking_ch_");
+    config->set_property("Tracking.implementation", "GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking");
     config->set_property("Tracking.order", "2");
     config->set_property("Tracking.pll_bw_hz", "30.0");
     config->set_property("Tracking.fll_bw_hz", "100.0");
@@ -105,16 +105,16 @@ void GpsL1CaDllFllPllDpeTrackingInternalTest::init()
 
 
 
-TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, Instantiate)
+TEST_F(GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest, Instantiate)
 {
 
     init();
-    auto tracking = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking", 1, 1, queue);
-    EXPECT_STREQ("GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking", tracking->implementation().c_str());
+    auto tracking = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking", 1, 1, queue);
+    EXPECT_STREQ("GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking", tracking->implementation().c_str());
 }
 
 
-TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ConnectAndRun)
+TEST_F(GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest, ConnectAndRun)
 {
     int fs_in = 4000000;
     int nsamples = 40000000;
@@ -126,8 +126,8 @@ TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ConnectAndRun)
     top_block = gr::make_top_block("Tracking test");
 
     // Example using smart pointers and the block factory
-    std::shared_ptr<GNSSBlockInterface> trk_ = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking", 1, 1, queue);
-    std::shared_ptr<GpsL1CaDllFllPllDpeTracking> tracking = std::dynamic_pointer_cast<GpsL1CaDllFllPllDpeTracking>(trk_);
+    std::shared_ptr<GNSSBlockInterface> trk_ = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking", 1, 1, queue);
+    std::shared_ptr<GpsL1CaDllFllPllMulticorrelatorTracking> tracking = std::dynamic_pointer_cast<GpsL1CaDllFllPllMulticorrelatorTracking>(trk_);
 
     ASSERT_NO_THROW( {
         tracking->set_channel(gnss_synchro.Channel_ID);
@@ -168,7 +168,7 @@ TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ConnectAndRun)
 
 
 
-TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ValidationOfResults)
+TEST_F(GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest, ValidationOfResults)
 {
     struct timeval tv;
     long long int begin = 0;
@@ -184,7 +184,7 @@ TEST_F(GpsL1CaDllFllPllDpeTrackingInternalTest, ValidationOfResults)
     std::cout << "test_dump set to " << test_dump << std::endl;
 
     // Example using smart pointers and the block factory
-    std::shared_ptr<GNSSBlockInterface> trk_ = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_DPE_Tracking", 1, 1, queue);
+    std::shared_ptr<GNSSBlockInterface> trk_ = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking", 1, 1, queue);
     std::shared_ptr<TrackingInterface> tracking = std::dynamic_pointer_cast<TrackingInterface>(trk_);
 
     gnss_synchro.Acq_delay_samples = 524;

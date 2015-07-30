@@ -1,8 +1,8 @@
 /*!
- * \file gps_l1_ca_dll_fll_pll_dpe_tracking_cc.h
+ * \file gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc.h
  * \brief GNU Radio block of a DLL + carrier FLL/PLL tracking
- * loop used in Direct Position Estimation for GPS L1 C/A to a 
- * TrackingInterface
+ * loop with multiple correlators for GPS L1 C/A 
+ *
  * \author Luis Esteve, 2015. luis.esteve.elfau(at)gmail.com
  *
  * This is the GNU Radio block  of a code Delay Locked Loop (DLL) + carrier
@@ -38,8 +38,8 @@
  * -------------------------------------------------------------------------
  */
 
-#ifndef GNSS_SDR_GPS_L1_CA_DLL_FLL_PLL_DPE_TRACKING_CC_H
-#define	GNSS_SDR_GPS_L1_CA_DLL_FLL_PLL_DPE_TRACKING_CC_H
+#ifndef GNSS_SDR_GPS_L1_CA_DLL_FLL_PLL_MULTICORRELATOR_TRACKING_CC_H
+#define	GNSS_SDR_GPS_L1_CA_DLL_FLL_PLL_MULTICORRELATOR_TRACKING_CC_H
 
 #include <fstream>
 #include <queue>
@@ -57,13 +57,13 @@
 #include "correlator.h"
 #include "engine.h"
 
-class Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc;
+class Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc;
 
-typedef boost::shared_ptr<Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc>
-gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr;
+typedef boost::shared_ptr<Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc>
+gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc_sptr;
 
-gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr
-gps_l1_ca_dll_fll_pll_dpe_make_tracking_cc(
+gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc_sptr
+gps_l1_ca_dll_fll_pll_multicorrelator_make_tracking_cc(
         long if_freq,
         long fs_in,
         unsigned int vector_length,
@@ -81,10 +81,10 @@ gps_l1_ca_dll_fll_pll_dpe_make_tracking_cc(
 /*!
  * \brief This class implements a DLL and a FLL assisted PLL tracking loop block for DPE
  */
-class Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc: public gr::block
+class Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc: public gr::block
 {
 public:
-    ~Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc();
+    ~Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc();
 
     void set_channel(unsigned int channel);
     void start_tracking();
@@ -108,8 +108,8 @@ public:
 
     void forecast (int noutput_items, gr_vector_int &ninput_items_required);
 private:
-    friend gps_l1_ca_dll_fll_pll_dpe_tracking_cc_sptr
-    gps_l1_ca_dll_fll_pll_dpe_make_tracking_cc(
+    friend gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc_sptr
+    gps_l1_ca_dll_fll_pll_multicorrelator_make_tracking_cc(
             long if_freq,
             long fs_in, unsigned
             int vector_length,
@@ -123,7 +123,7 @@ private:
             unsigned int num_oneside_correlators,
             float *correlators_space_chips);
 
-    Gps_L1_Ca_Dll_Fll_Pll_Dpe_Tracking_cc(
+    Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc(
             long if_freq,
             long fs_in, unsigned
             int vector_length,
@@ -226,4 +226,4 @@ private:
     std::string sys;
 };
 
-#endif //GNSS_SDR_GPS_L1_CA_DLL_FLL_PLL_DPE_TRACKING_CC_H
+#endif //GNSS_SDR_GPS_L1_CA_DLL_FLL_PLL_MULTICORRELATOR_TRACKING_CC_H
