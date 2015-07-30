@@ -75,12 +75,15 @@ GpsL1CaDllFllPllMulticorrelatorTracking::GpsL1CaDllFllPllMulticorrelatorTracking
     float *correlators_space_chips;
     unsigned int el_index;
     int order;
+    bool matlab_enable;
+    unsigned int matlab_plot_period;
     item_type = configuration->property(role + ".item_type",default_item_type);
-    //vector_length = configuration->property(role + ".vector_length", 2048);
     fs_in = configuration->property("GNSS-SDR.internal_fs_hz", 2048000);
     f_if = configuration->property(role + ".if", 0);
     dump = configuration->property(role + ".dump", false);
-    //std::cout << "dump set to " << dump << std::endl;
+    std::string default_dump_filename = "./track_ch";
+    dump_filename = configuration->property(role + ".dump_filename",
+            default_dump_filename); //unused!
     order = configuration->property(role + ".order", 2);
     pll_bw_hz = configuration->property(role + ".pll_bw_hz", 50.0);
     fll_bw_hz = configuration->property(role + ".fll_bw_hz", 100.0);
@@ -98,9 +101,9 @@ GpsL1CaDllFllPllMulticorrelatorTracking::GpsL1CaDllFllPllMulticorrelatorTracking
         }
     el_index = configuration->property(role + ".correlators_EL_index", 0);
     std::cout << "EL index = " << el_index << std::endl;
-    std::string default_dump_filename = "./track_ch";
-    dump_filename = configuration->property(role + ".dump_filename",
-            default_dump_filename); //unused!
+    matlab_enable = configuration->property(role + ".Matlab_enable", false);
+    matlab_plot_period = configuration->property(role + ".Matlab_plot_period", 50);
+
     vector_length = std::round(fs_in / (GPS_L1_CA_CODE_RATE_HZ / GPS_L1_CA_CODE_LENGTH_CHIPS));
 
     //################# MAKE TRACKING GNURadio object ###################
@@ -120,7 +123,9 @@ GpsL1CaDllFllPllMulticorrelatorTracking::GpsL1CaDllFllPllMulticorrelatorTracking
                     dll_bw_hz,
                     num_oneside_correlators,
                     correlators_space_chips,
-                    el_index);
+                    el_index,
+                    matlab_enable,
+                    matlab_plot_period);
         }
     else
         {

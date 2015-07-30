@@ -52,7 +52,6 @@
 #include "tracking_FLL_PLL_filter.h"
 #include "control_message_factory.h"
 #include "gnss_flowgraph.h"
-//#include <math.h>
 
 /*!
  * \todo Include in definition header file
@@ -77,19 +76,19 @@ gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc_sptr gps_l1_ca_dll_fll_pll_mul
         float dll_bw_hz,
         unsigned int num_oneside_correlators,
         float *correlators_space_chips,
-        unsigned int el_index)
+        unsigned int el_index,
+        bool matlab_enable,
+        unsigned int matlab_plot_period)
 {
-std::cout << "make del bloque gnu" << std::endl;
-for (unsigned int i= 0; i < num_oneside_correlators; i++)
-        {
-            std::cout << " correlators_space_chips[" << i << "] = " << correlators_space_chips[i] << std::endl;
-        }
+//std::cout << "make del bloque gnu" << std::endl;
+// for (unsigned int i= 0; i < num_oneside_correlators; i++)
+//         {
+//             std::cout << " correlators_space_chips[" << i << "] = " << correlators_space_chips[i] << std::endl;
+//         }
     return gps_l1_ca_dll_fll_pll_multicorrelator_tracking_cc_sptr(new Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc(if_freq,
             fs_in, vector_length, queue, dump, dump_filename, order, fll_bw_hz, pll_bw_hz,dll_bw_hz,
-            num_oneside_correlators, correlators_space_chips, el_index));
+            num_oneside_correlators, correlators_space_chips, el_index, matlab_enable, matlab_plot_period));
 }
-
-
 
 
 void Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::forecast (int noutput_items, gr_vector_int &ninput_items_required)
@@ -111,7 +110,9 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multico
         float dll_bw_hz,
         unsigned int num_oneside_correlators,
         float *correlators_space_chips,
-        unsigned int el_index) :
+        unsigned int el_index,
+        bool matlab_enable,
+        unsigned int matlab_plot_period) :
         gr::block("Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc", gr::io_signature::make(1, 1, sizeof(gr_complex)),
                 gr::io_signature::make(1, 1, sizeof(Gnss_Synchro)))
 {
@@ -130,7 +131,7 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multico
     std::cout << "d_num_oneside_correlators = " << d_num_oneside_correlators << std::endl;
     std::cout << "d_num_correlators = " << d_num_correlators << std::endl;
     d_correlators_space_chips = new double[d_num_oneside_correlators];
-    d_code_index = new unsigned int[d_num_correlators];
+    d_code_index = new int[d_num_correlators];
     for(unsigned int i = 0; i < d_num_oneside_correlators; i++)
     {
         d_correlators_space_chips[i] = static_cast<double>(correlators_space_chips[i]); // Define correlators distance (in chips)
@@ -150,11 +151,6 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multico
 
     // Get space for the resampled replicas of multicorrelator
     d_code = static_cast<gr_complex*>(volk_malloc(d_num_correlators*2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
-
-    // Get space for the resampled early / prompt / late local replicas
-    // d_early_code = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
-    // d_prompt_code = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
-    // d_late_code = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
 
     // space for carrier wipeoff and signal baseband vectors
     d_carr_sign = static_cast<gr_complex*>(volk_malloc(2*d_vector_length * sizeof(gr_complex), volk_get_alignment()));
@@ -204,12 +200,16 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multico
     d_pull_in = false;
     d_FLL_wait = 1;
 
-    d_ep=engOpen("\0"); //Start the Matlab engine.  
+    d_matlab_enable = matlab_enable;
 
-    //Defined mxArray, the array is one line of real numbers, N columns.
-    d_CORR = mxCreateDoubleMatrix(d_num_correlators, 1, mxREAL);
+    if(d_matlab_enable)
+        {
+            d_ep=engOpen("\0"); //Start the Matlab engine.
+        }
 
-    matlab_count = 0;
+    d_matlab_plot_period = matlab_plot_period;
+    
+    d_matlab_count = 0;
 
     for (unsigned int i= 0; i < d_num_oneside_correlators; i++)
         {
@@ -323,8 +323,13 @@ void Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::update_local_code()
             early_late_spc_samples[i] = round(d_correlators_space_chips[i]/code_phase_step_chips);
         }
     
+    // for(unsigned int i =0; i < d_num_oneside_correlators; i++)
+    //     {
+    //         std::cout << "early_late_spc_samples[" << i << "] = " << early_late_spc_samples[i] << std::endl;
+    //     }
+
     correlator_loop_length_samples = d_current_prn_length_samples + early_late_spc_samples[d_num_oneside_correlators-1]*2;
-    // gr_complex code[correlator_loop_length_samples];
+
     for (unsigned int i = 0; i < correlator_loop_length_samples; i++)
         {
             associated_chip_index = code_length_chips + round(fmod(tcode_chips - d_correlators_space_chips[d_num_oneside_correlators-1], code_length_chips));
@@ -332,45 +337,21 @@ void Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::update_local_code()
             tcode_chips = tcode_chips + code_phase_step_chips;
         }
 
-    d_code_index[0] = 0.0;
+    d_code_index[d_num_oneside_correlators] = 0;
 
     for(unsigned int i =0; i < d_num_oneside_correlators; i++)
         {
-            d_code_index[i+1] = d_code_index[i] + early_late_spc_samples[d_num_oneside_correlators-1-i];
+            d_code_index[i] = -early_late_spc_samples[d_num_oneside_correlators-1-i];
         }
 
     for(unsigned int i =0; i < d_num_oneside_correlators; i++)
         {
-            d_code_index[d_num_oneside_correlators+i+1] = d_code_index[d_num_oneside_correlators+i] + early_late_spc_samples[i];
+            d_code_index[d_num_oneside_correlators+i+1] = early_late_spc_samples[i];
         }
-
-    // for (unsigned int i = 0; i < d_num_correlators; i++)
-    // {
-    //     std::cout << "d_code_index[" << i << "] = " << d_code_index[i] << std::endl;
-    // }
-
-
-
-
-    
-    // for(unsigned int i =0; i < d_num_oneside_correlators; i++)
+    // for(unsigned int i =0; i < d_num_correlators; i++)
     //     {
-    //         memcpy(d_code,&code[d_early_late_spc_samples[i]],d_current_prn_length_samples* sizeof(gr_complex));
+    //         std::cout << "d_code_index[" << i << "] = " << d_code_index[i] << std::endl;
     //     }
-
-    // memcpy(d_prompt_code,&d_early_code[max_early_late_spc_samples],d_current_prn_length_samples* sizeof(gr_complex));
-    // memcpy(d_late_code,&d_early_code[max_early_late_spc_samples*2],d_current_prn_length_samples* sizeof(gr_complex));
-
-    //    for (int i=0; i<d_current_prn_length_samples; i++)
-    //        {
-    //            associated_chip_index = 1 + round(fmod(tcode_chips - d_correlators_space_chips, code_length_chips));
-    //            d_early_code[i] = d_ca_code[associated_chip_index];
-    //            associated_chip_index = 1 + round(fmod(tcode_chips, code_length_chips));
-    //            d_prompt_code[i] = d_ca_code[associated_chip_index];
-    //            associated_chip_index = 1 + round(fmod(tcode_chips + d_correlators_space_chips, code_length_chips));
-    //            d_late_code[i] = d_ca_code[associated_chip_index];
-    //            tcode_chips = tcode_chips + code_phase_step_chips;
-    //        }
 }
 
 
@@ -400,10 +381,7 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::~Gps_L1_Ca_Dll_Fll_Pll_Multic
 
     volk_free(d_ca_code);
     volk_free(d_code);
-    // volk_free(d_prompt_code);
-    // volk_free(d_late_code);
-    // volk_free(d_early_code);
-    // volk_free(d_carr_sign);
+    volk_free(d_carr_sign);
     volk_free(d_output);
     volk_free(d_Early);
     volk_free(d_Prompt);
@@ -412,12 +390,12 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::~Gps_L1_Ca_Dll_Fll_Pll_Multic
     delete[] d_correlators_space_chips;
     delete[] d_code_index;
     delete[] d_Prompt_buffer;
-      
-    engClose(d_ep);  //Close Matlab engine.
-    mxDestroyArray(d_CORR); //Destruction mxArray CORR
+    
+    if(d_matlab_enable)
+        {  
+            engClose(d_ep);  //Close Matlab engine.
+        }
 }
-
-
 
 
 int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput_items, gr_vector_int &ninput_items,
@@ -479,18 +457,8 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
             update_local_code();
             update_local_carrier();
 
-            // perform Early, Prompt and Late correlation
+            // perform the correlations
 
-            // d_correlator.Carrier_wipeoff_and_EPL_volk(d_current_prn_length_samples,
-            //         in,
-            //         d_carr_sign,
-            //         d_early_code,
-            //         d_prompt_code,
-            //         d_late_code,
-            //         d_Early,
-            //         d_Prompt,
-            //         d_Late);
-            // std::cout << "Supera los updates" << std::endl;
             d_correlator.Carrier_wipeoff_and_multiEPL_volk(d_current_prn_length_samples,
                     in,
                     d_carr_sign,
@@ -697,7 +665,6 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
         {
             // MULTIPLEXED FILE RECORDING - Record results to file
 
-            //std::cout << "d_num_oneside_correlators set to " << d_num_oneside_correlators << std::endl;
             float prompt_I;
             float prompt_Q;
             float tmp_E, tmp_P, tmp_L;
@@ -708,25 +675,99 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
             tmp_E = std::abs<float>(*d_Early);
             tmp_P = std::abs<float>(*d_Prompt);
             tmp_L = std::abs<float>(*d_Late);
-            float tmp_out[d_num_correlators];
 
+            try
+            {
+                    // EPR
+                    d_dump_file.write((char*)&tmp_E, sizeof(float));
+                    d_dump_file.write((char*)&tmp_P, sizeof(float));
+                    d_dump_file.write((char*)&tmp_L, sizeof(float));
+                    // PROMPT I and Q (to analyze navigation symbols)
+                    d_dump_file.write((char*)&prompt_I, sizeof(float));
+                    d_dump_file.write((char*)&prompt_Q, sizeof(float));
+                    // PRN start sample stamp
+                    d_dump_file.write((char*)&d_sample_counter, sizeof(unsigned long int));
+                    // accumulated carrier phase
+                    tmp_float = (float)d_acc_carrier_phase_rad;
+                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+
+                    // carrier and code frequency
+                    tmp_float = (float)d_carrier_doppler_hz;
+                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+                    tmp_float = (float)d_code_freq_hz;
+                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+
+                    //PLL commands
+                    tmp_float = (float)PLL_discriminator_hz;
+                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+                    tmp_float = (float)carr_nco_hz;
+                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+
+                    //DLL commands
+                    tmp_float = (float)code_error_chips;
+                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+                    tmp_float = (float)code_error_filt_chips;
+                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+
+                    // CN0 and carrier lock test
+                    tmp_float = (float)d_CN0_SNV_dB_Hz;
+                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+                    tmp_float = (float)d_carrier_lock_test;
+                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+
+                    // AUX vars (for debug purposes)
+                    tmp_float = (float)d_rem_code_phase_samples;
+                    d_dump_file.write((char*)&tmp_float, sizeof(float));
+                    tmp_double = (double)(d_sample_counter + d_current_prn_length_samples);
+                    d_dump_file.write((char*)&tmp_double, sizeof(double));
+            }
+            catch (std::ifstream::failure e)
+            {
+                    LOG(INFO) << "Exception writing trk dump file "<< e.what() << std::endl;
+            }
+        }
+
+
+    if(d_matlab_enable)
+        {
+            // MATLAB Representation
+
+            float tmp_out[d_num_correlators];
             for (unsigned int i = 0; i < d_num_correlators; i++)
                 {
                     tmp_out[i] = std::abs<float>(d_output[i]);
                 }
+
+            float tmp_E, tmp_P, tmp_L;
+            tmp_E = std::abs<float>(*d_Early);
+            tmp_P = std::abs<float>(*d_Prompt);
+            tmp_L = std::abs<float>(*d_Late);
             
-            if(matlab_count >= 100)
+            if(d_matlab_count >= d_matlab_plot_period)
             {  
             //si el modulo es cero, entonces es multiplo  
-                if(matlab_count%100 == 0)
+                if(d_matlab_count%d_matlab_plot_period == 0)
                 {
                     
+                    //Defined mxArray, the array is one line of real numbers, N columns.
+                    mxArray *m_corr = mxCreateDoubleMatrix(d_num_correlators, 1, mxREAL);
+                    double *tmp_corr = new double [d_num_correlators];
+            
+                    // Copy the correlators value to a vector 
+                    for (unsigned int i = 0; i < d_num_correlators; i++)
+                    {
+                        tmp_corr[i] = static_cast<double>(tmp_out[i]);
+                    }
 
-                    //std::cout << "matlab_count = " << matlab_count << std::endl;
+                    //Copy the c ++ array of value to the corresponding mxArray 
+                    memcpy(mxGetPr(m_corr), tmp_corr, d_num_correlators*sizeof(double));
+
+                    //MxArray array will be written to the Matlab workspace 
+                    engPutVariable(d_ep, "corr", m_corr);
+                    
                     mxArray *m_count = mxCreateDoubleMatrix(1, 1, mxREAL);
                     double tmp_m_count;
-                    tmp_m_count = static_cast<double>(matlab_count);
-                    //std::cout << "tmp_m_count = " << tmp_m_count << std::endl;
+                    tmp_m_count = static_cast<double>(d_matlab_count);
                     memcpy(mxGetPr(m_count), &tmp_m_count, sizeof(double));
                     engPutVariable(d_ep, "mat_count", m_count);
 
@@ -735,6 +776,14 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
                     tmp_m_channel = static_cast<double>(d_channel);
                     memcpy(mxGetPr(m_channel), &tmp_m_channel, sizeof(double));
                     engPutVariable(d_ep, "mat_channel", m_channel);
+
+                    
+
+                    mxArray *m_prn = mxCreateDoubleMatrix(1, 1, mxREAL);
+                    double tmp_m_prn;
+                    tmp_m_prn = static_cast<double>(d_acquisition_gnss_synchro->PRN);
+                    memcpy(mxGetPr(m_prn), &tmp_m_prn, sizeof(double));
+                    engPutVariable(d_ep, "mat_prn", m_prn);
 
                     mxArray *m_index = mxCreateDoubleMatrix(d_num_correlators, 1, mxREAL);
                     double *tmp_m_index = new double [d_num_correlators];
@@ -746,98 +795,39 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
                     memcpy(mxGetPr(m_index), tmp_m_index, d_num_correlators*sizeof(double));
                     engPutVariable(d_ep, "mat_index", m_index);
 
+                    mxArray *m_epl_corr = mxCreateDoubleMatrix(3, 1, mxREAL);
+                    double *tmp_m_epl_corr = new double [3];
+                    tmp_m_epl_corr[0] = static_cast<double>(tmp_E);
+                    tmp_m_epl_corr[1] = static_cast<double>(tmp_P);
+                    tmp_m_epl_corr[2] = static_cast<double>(tmp_L);
+                    memcpy(mxGetPr(m_epl_corr), tmp_m_epl_corr, 3*sizeof(double));
+                    engPutVariable(d_ep, "epl_corr", m_epl_corr);
 
 
-                    double *tmp_corr = new double [d_num_correlators];
+                    mxArray *m_epl_index = mxCreateDoubleMatrix(3, 1, mxREAL);
+                    double *tmp_m_epl_index = new double [3];
+                    tmp_m_epl_index[0] = static_cast<double>(d_code_index[d_num_oneside_correlators-d_el_index-1]);
+                    tmp_m_epl_index[1] = static_cast<double>(d_code_index[d_num_oneside_correlators]);
+                    tmp_m_epl_index[2] = static_cast<double>(d_code_index[d_num_oneside_correlators+d_el_index+1]);
+                    memcpy(mxGetPr(m_epl_index), tmp_m_epl_index, 3*sizeof(double));
+                    engPutVariable(d_ep, "epl_index", m_epl_index);
 
-
-            
-                    // Copy the correlators value to a vector 
-                    for (unsigned int i = 0; i < d_num_correlators; i++)
-                    {
-                        tmp_corr[i] = static_cast<double>(tmp_out[i]);
-                    }
-
-                    //Copy the c ++ array of value to the corresponding mxArray 
-                    memcpy(mxGetPr(d_CORR), tmp_corr, d_num_correlators*sizeof(double));
-
-
-                    //MxArray array will be written to the Matlab workspace 
-                    engPutVariable(d_ep, "corr", d_CORR);
-
-                    //Matlab engine sends drawing commands. 
-                    engEvalString(d_ep, "plot(mat_index, corr,'-.s'); grid on; title(sprintf('Tracking channel: %u \t Number of codes = %0.1f',mat_channel,mat_count));");  
-            
+                   //Matlab engine sends drawing commands. 
+                    engEvalString(d_ep, "plot(mat_index, corr,'-.s'); grid on; title(sprintf('Channel: %u \t PRN = %u \t Number of codes = %u',mat_channel,mat_prn,mat_count)); hold on;");  
+                    engEvalString(d_ep, "plot(epl_index, epl_corr,'rs'); hold off; xlabel('samples'); ylabel('Correlators');");            
                     delete tmp_corr;
                     delete tmp_m_index;
                     mxDestroyArray(m_count);
                     mxDestroyArray(m_channel);
+                    mxDestroyArray(m_prn);
                     mxDestroyArray(m_index);
-            
+                    mxDestroyArray(m_corr);
+                    mxDestroyArray(m_epl_index);
+                    mxDestroyArray(m_epl_corr);
                 }
             }
-            
-
-  
-            // try
-            // {
-            //         // EPR
-            //         d_dump_file.write((char*)&tmp_E, sizeof(float));
-            //         d_dump_file.write((char*)&tmp_P, sizeof(float));
-            //         d_dump_file.write((char*)&tmp_L, sizeof(float));
-            //         // PROMPT I and Q (to analyze navigation symbols)
-            //         d_dump_file.write((char*)&prompt_I, sizeof(float));
-            //         d_dump_file.write((char*)&prompt_Q, sizeof(float));
-            //         // PRN start sample stamp
-            //         d_dump_file.write((char*)&d_sample_counter, sizeof(unsigned long int));
-            //         // accumulated carrier phase
-            //         tmp_float = (float)d_acc_carrier_phase_rad;
-            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
-
-            //         // carrier and code frequency
-            //         tmp_float = (float)d_carrier_doppler_hz;
-            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
-            //         tmp_float = (float)d_code_freq_hz;
-            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
-
-            //         //PLL commands
-            //         tmp_float = (float)PLL_discriminator_hz;
-            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
-            //         tmp_float = (float)carr_nco_hz;
-            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
-
-            //         //DLL commands
-            //         tmp_float = (float)code_error_chips;
-            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
-            //         tmp_float = (float)code_error_filt_chips;
-            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
-
-            //         // CN0 and carrier lock test
-            //         tmp_float = (float)d_CN0_SNV_dB_Hz;
-            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
-            //         tmp_float = (float)d_carrier_lock_test;
-            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
-
-            //         // AUX vars (for debug purposes)
-            //         tmp_float = (float)d_rem_code_phase_samples;
-            //         d_dump_file.write((char*)&tmp_float, sizeof(float));
-            //         tmp_double = (double)(d_sample_counter + d_current_prn_length_samples);
-            //         d_dump_file.write((char*)&tmp_double, sizeof(double));
-            // }
-            // catch (std::ifstream::failure e)
-            // {
-            //         LOG(INFO) << "Exception writing trk dump file "<< e.what() << std::endl;
-            // }
-
-
-            //Use cin.get() to make sure that we pause long enough to be able to see the plot. 
-
-            // std::cout<<"Hit any key to exit!"<<std::endl;  
-            // std::cin.get();
-
-            
         }
-    matlab_count++;
+    d_matlab_count++;
     consume_each(d_current_prn_length_samples); // this is necessary in gr::block derivates
     d_sample_counter += d_current_prn_length_samples; //count for the processed samples
     return 1; //output tracking result ALWAYS even in the case of d_enable_tracking==false

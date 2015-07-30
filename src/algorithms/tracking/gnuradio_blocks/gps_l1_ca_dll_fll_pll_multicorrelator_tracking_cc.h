@@ -76,7 +76,9 @@ gps_l1_ca_dll_fll_pll_multicorrelator_make_tracking_cc(
         float dll_bw_hz,
         unsigned int num_oneside_correlators,
         float *correlators_space_chips,
-        unsigned int el_index);
+        unsigned int el_index,
+        bool matlab_enable,
+        unsigned int matlab_plot_period);
 
 
 /*!
@@ -123,7 +125,9 @@ private:
             float dll_bw_hz,
             unsigned int num_oneside_correlators,
             float *correlators_space_chips,
-            unsigned int el_index);
+            unsigned int el_index,
+            bool matlab_enable,
+            unsigned int matlab_plot_period);
 
     Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc(
             long if_freq,
@@ -138,7 +142,9 @@ private:
             float dll_bw_hz,
             unsigned int num_oneside_correlators,
             float *correlators_space_chips,
-            unsigned int el_index);
+            unsigned int el_index,
+            bool matlab_enable,
+            unsigned int matlab_plot_period);
 
     void CN0_estimation_and_lock_detectors();
 
@@ -172,7 +178,7 @@ private:
 
     double *d_correlators_space_chips;
     
-    unsigned int *d_code_index;
+    int *d_code_index;
 
     unsigned int d_el_index;
 
@@ -221,11 +227,11 @@ private:
     std::string d_dump_filename;
     std::ofstream d_dump_file;
 
-    Engine *d_ep; //Define Matlab engine pointer. 
-
-    mxArray *d_CORR = NULL;
-
-    unsigned int matlab_count;
+    // Matlab representation
+    Engine *d_ep; //Define Matlab engine pointer.
+    bool d_matlab_enable;
+    unsigned int d_matlab_count;
+    unsigned int d_matlab_plot_period;
 
     std::map<std::string, std::string> systemName;
     std::string sys;

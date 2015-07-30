@@ -66,7 +66,8 @@ protected:
     ~GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest()
     {}
 
-    void init();
+    void config_1();
+    void config_2();
 
     gr::msg_queue::sptr queue;
     gr::top_block_sptr top_block;
@@ -77,16 +78,22 @@ protected:
     concurrent_queue<int> channel_internal_queue;
     bool stop;
     int message;
+
+    double delay_chips = 0.0;
+    double doppler_hz = 0.0;
+    unsigned int fs_in = 0;
 };
 
 
-void GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest::init()
+void GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest::config_1()
 {
     gnss_synchro.Channel_ID = 0;
     gnss_synchro.System = 'G';
     std::string signal = "1C";
-    signal.copy(gnss_synchro.Signal, 2, 0);
+    signal.copy(gnss_synchro.Signal,2,0);
     gnss_synchro.PRN = 11;
+    fs_in = 4e6;
+
 
     config->set_property("GNSS-SDR.internal_fs_hz", "4000000");
     config->set_property("Tracking.item_type", "gr_complex");
@@ -97,18 +104,95 @@ void GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest::init()
     config->set_property("Tracking.pll_bw_hz", "30.0");
     config->set_property("Tracking.fll_bw_hz", "100.0");
     config->set_property("Tracking.dll_bw_hz", "2.0");
-    config->set_property("Tracking.number_of_correlators", "3");
-    config->set_property("Tracking.correlators_space_chips", "0.5");
+    config->set_property("Tracking.number_of_oneside_correlators", "4");
+    config->set_property("Tracking.correlators_space_chips_0", "0.1");
+    config->set_property("Tracking.correlators_space_chips_1", "0.2");
+    config->set_property("Tracking.correlators_space_chips_2", "0.3");
+    config->set_property("Tracking.correlators_space_chips_3", "0.4");
+    config->set_property("Tracking.correlators_EL_index", "1");
     
 
 }
 
+void GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest::config_2()
+{
+    gnss_synchro.Channel_ID = 0;
+    gnss_synchro.System = 'G';
+    std::string signal = "1C";
+    signal.copy(gnss_synchro.Signal,2,0);
+    gnss_synchro.PRN = 11;
 
+    fs_in = 4e6;
+
+    delay_chips = 600;
+    doppler_hz = 750;
+
+    gnss_synchro.Acq_delay_samples = (delay_chips*static_cast<double>(fs_in)/1.023e6)+10.0;
+    gnss_synchro.Acq_doppler_hz = doppler_hz;
+    gnss_synchro.Acq_samplestamp_samples = 0;
+
+    config = std::make_shared<InMemoryConfiguration>();
+
+    config->set_property("GNSS-SDR.internal_fs_hz", std::to_string(fs_in));
+
+    config->set_property("SignalSource.fs_hz", std::to_string(fs_in));
+
+    config->set_property("SignalSource.item_type", "gr_complex");
+
+    config->set_property("SignalSource.num_satellites", "1");
+
+    config->set_property("SignalSource.system_0", "G");
+    config->set_property("SignalSource.PRN_0", "11");
+    config->set_property("SignalSource.CN0_dB_0", "44");
+    config->set_property("SignalSource.doppler_Hz_0", std::to_string(doppler_hz));
+    config->set_property("SignalSource.delay_chips_0", std::to_string(delay_chips));
+
+    config->set_property("SignalSource.noise_flag", "false");
+    config->set_property("SignalSource.data_flag", "false");
+    config->set_property("SignalSource.BW_BB", "0.97");
+
+    config->set_property("InputFilter.implementation", "Fir_Filter");
+    config->set_property("InputFilter.input_item_type", "gr_complex");
+    config->set_property("InputFilter.output_item_type", "gr_complex");
+    config->set_property("InputFilter.taps_item_type", "float");
+    config->set_property("InputFilter.number_of_taps", "11");
+    config->set_property("InputFilter.number_of_bands", "2");
+    config->set_property("InputFilter.band1_begin", "0.0");
+    config->set_property("InputFilter.band1_end", "0.97");
+    config->set_property("InputFilter.band2_begin", "0.98");
+    config->set_property("InputFilter.band2_end", "1.0");
+    config->set_property("InputFilter.ampl1_begin", "1.0");
+    config->set_property("InputFilter.ampl1_end", "1.0");
+    config->set_property("InputFilter.ampl2_begin", "0.0");
+    config->set_property("InputFilter.ampl2_end", "0.0");
+    config->set_property("InputFilter.band1_error", "1.0");
+    config->set_property("InputFilter.band2_error", "1.0");
+    config->set_property("InputFilter.filter_type", "bandpass");
+    config->set_property("InputFilter.grid_density", "16");
+
+    config->set_property("Tracking.item_type", "gr_complex");
+    config->set_property("Tracking.dump", "false");
+    config->set_property("Tracking.dump_filename", "../data/multicorrelator_tracking_ch_");
+    config->set_property("Tracking.implementation", "GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking");
+    config->set_property("Tracking.order", "3");
+    config->set_property("Tracking.pll_bw_hz", "45.0");
+    config->set_property("Tracking.fll_bw_hz", "10.0");
+    config->set_property("Tracking.dll_bw_hz", "3.0");
+    config->set_property("Tracking.number_of_oneside_correlators", "5");
+    config->set_property("Tracking.correlators_space_chips_0", "0.2");
+    config->set_property("Tracking.correlators_space_chips_1", "0.4");
+    config->set_property("Tracking.correlators_space_chips_2", "0.6");
+    config->set_property("Tracking.correlators_space_chips_3", "0.8");
+    config->set_property("Tracking.correlators_space_chips_4", "1.0");
+    config->set_property("Tracking.correlators_EL_index", "2");
+    config->set_property("Tracking.Matlab_enable", "true");
+    config->set_property("Tracking.Matlab_plot_period", "100");
+}
 
 TEST_F(GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest, Instantiate)
 {
 
-    init();
+    config_1();
     auto tracking = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking", 1, 1, queue);
     EXPECT_STREQ("GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking", tracking->implementation().c_str());
 }
@@ -116,12 +200,11 @@ TEST_F(GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest, Instantiate)
 
 TEST_F(GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest, ConnectAndRun)
 {
-    int fs_in = 4000000;
     int nsamples = 40000000;
     struct timeval tv;
     long long int begin = 0;
     long long int end = 0;
-    init();
+    config_1();
     queue = gr::msg_queue::make(0);
     top_block = gr::make_top_block("Tracking test");
 
@@ -173,9 +256,8 @@ TEST_F(GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest, ValidationOfResults)
     struct timeval tv;
     long long int begin = 0;
     long long int end = 0;
-    int num_samples = 8000000;
-    unsigned int skiphead_sps = 4000000;
-    init();
+    int num_samples = 40000000;
+    config_2();
     queue = gr::msg_queue::make(0);
     top_block = gr::make_top_block("Tracking test");
 
@@ -186,10 +268,6 @@ TEST_F(GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest, ValidationOfResults)
     // Example using smart pointers and the block factory
     std::shared_ptr<GNSSBlockInterface> trk_ = factory->GetBlock(config, "Tracking", "GPS_L1_CA_DLL_FLL_PLL_Multicorrelator_Tracking", 1, 1, queue);
     std::shared_ptr<TrackingInterface> tracking = std::dynamic_pointer_cast<TrackingInterface>(trk_);
-
-    gnss_synchro.Acq_delay_samples = 524;
-    gnss_synchro.Acq_doppler_hz = -1680;
-    gnss_synchro.Acq_samplestamp_samples = 0;
 
     ASSERT_NO_THROW( {
         tracking->set_channel(gnss_synchro.Channel_ID);
@@ -208,15 +286,14 @@ TEST_F(GpsL1CaDllFllPllMulticorrelatorTrackingInternalTest, ValidationOfResults)
     }) << "Failure connecting tracking to the top_block." << std::endl;
 
     ASSERT_NO_THROW( {
-        std::string path = std::string(TEST_PATH);
-        std::string file = path + "signal_samples/GPS_L1_CA_ID_1_Fs_4Msps_2ms.dat";
-        const char * file_name = file.c_str();
-        gr::blocks::file_source::sptr file_source = gr::blocks::file_source::make(sizeof(gr_complex),file_name,false);
-        gr::blocks::skiphead::sptr skip_head = gr::blocks::skiphead::make(sizeof(gr_complex), skiphead_sps);
+        boost::shared_ptr<GenSignalSource> signal_source;
+        SignalGenerator* signal_generator = new SignalGenerator(config.get(), "SignalSource", 0, 1, queue);
+        FirFilter* filter = new FirFilter(config.get(), "InputFilter", 1, 1, queue);
         boost::shared_ptr<gr::block> valve = gnss_sdr_make_valve(sizeof(gr_complex), num_samples, queue);
         gr::blocks::null_sink::sptr sink = gr::blocks::null_sink::make(sizeof(Gnss_Synchro));
-        top_block->connect(file_source, 0, skip_head, 0);
-        top_block->connect(skip_head, 0, valve, 0);
+        signal_source.reset(new GenSignalSource(config.get(), signal_generator, filter, "SignalSource", queue));
+        signal_source->connect(top_block);
+        top_block->connect(signal_source->get_right_block(), 0, valve, 0);
         top_block->connect(valve, 0, tracking->get_left_block(), 0);
         top_block->connect(tracking->get_right_block(), 0, sink, 0);
     }) << "Failure connecting the blocks of tracking test." << std::endl;
