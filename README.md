@@ -94,9 +94,9 @@ In case you do not want to use PyBOMBS and prefer to build and install GNU Radio
 $ sudo apt-get install libopenblas-dev liblapack-dev   # For Debian/Ubuntu/LinuxMint
 $ sudo yum install lapack-devel blas-devel             # For Fedora/CentOS/RHEL
 $ sudo zypper install lapack-devel blas-devel          # For OpenSUSE
-$ wget http://sourceforge.net/projects/arma/files/armadillo-5.200.2.tar.gz
-$ tar xvfz armadillo-5.200.2.tar.gz
-$ cd armadillo-5.200.2
+$ wget http://sourceforge.net/projects/arma/files/armadillo-5.400.2.tar.gz
+$ tar xvfz armadillo-5.400.2.tar.gz
+$ cd armadillo-5.400.2
 $ cmake .
 $ make
 $ sudo make install
@@ -134,23 +134,23 @@ $ sudo ldconfig
 
    
 
-#### Build the [Google C++ Testing Framework](http://code.google.com/p/googletest/ "Googletest Homepage"), also known as googletest:
+#### Build the [Google C++ Testing Framework](https://github.com/google/googletest "Googletest Homepage"), also known as googletest:
 
 ~~~~~~ 
-$ wget http://googletest.googlecode.com/files/gtest-1.7.0.zip
-$ unzip gtest-1.7.0.zip
-$ cd gtest-1.7.0
-$ ./configure
+$ wget https://github.com/google/googletest/archive/release-1.7.0.zip
+$ unzip release-1.7.0.zip
+$ cd googletest-release-1.7.0
+$ cmake .
 $ make
 ~~~~~~ 
 
-Please **DO NOT install** gtest (do *not* type ```sudo make install```). Every user needs to compile his tests using the same compiler flags used to compile the installed Google Test libraries; otherwise he may run into undefined behaviors (i.e. the tests can behave strangely and may even crash for no obvious reasons). The reason is that C++ has this thing called the One-Definition Rule: if two C++ source files contain different definitions of the same class/function/variable, and you link them together, you violate the rule. The linker may or may not catch the error (in many cases it is not required by the C++ standard to catch the violation). If it does not, you get strange run-time behaviors that are unexpected and hard to debug. If you compile Google Test and your test code using different compiler flags, they may see different definitions of the same class/function/variable (e.g. due to the use of ```#if``` in Google Test). Therefore, for your sanity, we recommend to avoid installing pre-compiled Google Test libraries. Instead, each project should compile Google Test itself such that it can be sure that the same flags are used for both Google Test and the tests. The building system of GNSS-SDR does the compilation and linking of gtest its own tests; it is only required that you tell the system where the gtest folder that you downloaded resides. Just add to your ```$HOME/.bashrc``` file the following line:
+Please **DO NOT install** googletest (do *not* type ```sudo make install```). Every user needs to compile his tests using the same compiler flags used to compile the installed Google Test libraries; otherwise he may run into undefined behaviors (i.e. the tests can behave strangely and may even crash for no obvious reasons). The reason is that C++ has this thing called the One-Definition Rule: if two C++ source files contain different definitions of the same class/function/variable, and you link them together, you violate the rule. The linker may or may not catch the error (in many cases it is not required by the C++ standard to catch the violation). If it does not, you get strange run-time behaviors that are unexpected and hard to debug. If you compile Google Test and your test code using different compiler flags, they may see different definitions of the same class/function/variable (e.g. due to the use of ```#if``` in Google Test). Therefore, for your sanity, we recommend to avoid installing pre-compiled Google Test libraries. Instead, each project should compile Google Test itself such that it can be sure that the same flags are used for both Google Test and the tests. The building system of GNSS-SDR does the compilation and linking of googletest to its own tests; it is only required that you tell the system where the googletest folder that you downloaded resides. Just add to your ```$HOME/.bashrc``` file the following line:
 
 ~~~~~~ 
 export GTEST_DIR=/home/username/gtest-1.7.0
 ~~~~~~ 
 
-changing /home/username/gtest-1.7.0 by the actual directory where you downloaded gtest. 
+changing /home/username/gtest-1.7.0 by the actual directory where you downloaded googletest. 
 
    
 
@@ -345,6 +345,19 @@ $ sudo make install
 ~~~~~~ 
 
 
+###### Build CUDA support (OPTIONAL):
+
+In order to enable the building of blocks that use CUDA, NVIDIA's parallel programming model that enables graphics processing unit (GPU) acceleration for data-parallel computations, first you need to install the CUDA Toolkit from [NVIDIA Developers Download page](https://developer.nvidia.com/cuda-downloads "CUDA Downloads"). Make sure that the SDK samples build well. Then, build GNSS-SDR by doing:
+
+~~~~~~ 
+$ cmake -DENABLE_CUDA=ON ../
+$ make
+$ sudo make install
+~~~~~~ 
+
+Of course, you will also need a GPU that [supports CUDA](https://developer.nvidia.com/cuda-gpus "CUDA GPUs").
+
+
 ###### Build a portable binary
 
 In order to build an executable that not depends on the specific SIMD instruction set that is present in the processor of the compiling machine, so other users can execute it in other machines without those particular sets, use:
@@ -365,7 +378,7 @@ Using this option, all SIMD instructions are exclusively accessed via VOLK, whic
 
 ### Mac OS X 10.9 (Mavericks) and 10.10 (Yosemite)
 
-If you still have not installed [Xcode](http://developer.apple.com/xcode/), do it now from the App Store (it's free). You will also need the Xcode Command Line Tools. Launch the Terminal, found in /Applications/Utilities/, and type:
+If you still have not installed [Xcode](http://developer.apple.com/xcode/ "Xcode"), do it now from the App Store (it's free). You will also need the Xcode Command Line Tools. Launch the Terminal, found in /Applications/Utilities/, and type:
 
 ~~~~~~ 
 $ xcode-select --install
@@ -377,7 +390,7 @@ Agree to Xcode license:
 $ sudo xcodebuild -license
 ~~~~~~ 
 
-Then, [install Macports](http://www.macports.org/install.php). If you are upgrading from a previous installation, please follow the [migration rules](http://trac.macports.org/wiki/Migration).
+Then, you need a package manager. For example, you can [install Macports](http://www.macports.org/install.php "Macports"). If you are upgrading from a previous installation, please follow the [migration rules](http://trac.macports.org/wiki/Migration).
 
 In a terminal, type:
 
@@ -433,11 +446,21 @@ $ open ../docs/html/index.html
 
 GNSS-SDR comes with a library with some specific Vector-Optimized Library of Kernels (VOLK) and a profiler that will build a config file for the best SIMD architecture for your processor. Run ``volk_gnsssdr_profile`` that is installed into $PREFIX/bin. This program tests all known VOLK kernels for each architecture supported by the processor. When finished, it will write to $HOME/.volk_gnsssdr/volk_gnsssdr_config the best architecture for the VOLK function. This file is read when using a function to know the best version of the function to execute. It mimics GNU Radio's VOLK library, so if you still have not run ```volk_profile```, this is a good moment to do so.
 
+###### Other package managers 
+
+GNU Radio and other dependencies can also be installed using other package managers than Macports, such as [Fink](http://www.finkproject.org/ "Fink") or [Homebrew](http://brew.sh/ "Homebrew"). Since the version of Python that ships with OS X is great for learning but it is not good for development, you could have another Python executable in a non-standard location. If that is the case, you need to inform GNSS-SDR's configuration system by defining the PYTHON_EXECUTABLE variable as:
+
+~~~~~~
+cmake -DPYTHON_EXECUTABLE=/path/to/bin/python ../
+~~~~~~ 
+
+The CMake script will create Makefiles that download, build and link Armadillo, Gflags, Glog and Google Test on the fly at compile time if they are not detected in your machine.
+
 
 Updating GNSS-SDR
 =================
 
-If you cloned GNSS-SDR some days ago, it is possible that some developer has updated files at the Git repository. You can update your working copy by doing:
+If you cloned GNSS-SDR some time ago, it is possible that some developer has updated files at the Git repository. You can update your working copy by doing:
 
 ~~~~~~ 
 $ git checkout master      # Switch to branch you want to update
@@ -841,7 +864,6 @@ Tracking_1C.dump=false ; Enable internal binary data file logging [true] or [fal
 Tracking_1C.dump_filename=./tracking_ch_ ; Log path and filename. Notice that the tracking channel will add "x.dat" where x is the channel number.
 Tracking_1C.pll_bw_hz=50.0 ; PLL loop filter bandwidth [Hz]
 Tracking_1C.dll_bw_hz=2.0 ; DLL loop filter bandwidth [Hz]
-Tracking_1C.fll_bw_hz=10.0 ; FLL loop filter bandwidth [Hz]
 Tracking_1C.order=3 ; PLL/DLL loop filter order [2] or [3]
 Tracking_1C.early_late_space_chips=0.5 ; correlator early-late space [chips]. 
 ~~~~~~ 

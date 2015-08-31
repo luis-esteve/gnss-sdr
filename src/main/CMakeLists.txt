@@ -16,6 +16,7 @@
 # along with GNSS-SDR. If not, see <http://www.gnu.org/licenses/>.
 #
 
+
 set(GNSS_SDR_OPTIONAL_LIBS "")
 set(GNSS_SDR_OPTIONAL_HEADERS "")
 
@@ -32,6 +33,13 @@ if(ENABLE_UHD)
     set(GNSS_SDR_OPTIONAL_HEADERS ${GNSS_SDR_OPTIONAL_HEADERS} ${UHD_INCLUDE_DIRS})
 endif(ENABLE_UHD)
 
+if(ENABLE_CUDA)
+    add_definitions(-DCUDA_GPU_ACCEL=1)
+    set(GNSS_SDR_OPTIONAL_LIBS ${GNSS_SDR_OPTIONAL_LIBS} ${CUDA_LIBRARIES})
+    set(GNSS_SDR_OPTIONAL_HEADERS ${GNSS_SDR_OPTIONAL_HEADERS} ${CUDA_INCLUDE_DIRS})
+endif(ENABLE_CUDA)
+
+
 include_directories(
      ${CMAKE_SOURCE_DIR}/src/core/system_parameters
      ${CMAKE_SOURCE_DIR}/src/core/interfaces
@@ -47,6 +55,7 @@ include_directories(
      ${GNURADIO_RUNTIME_INCLUDE_DIRS}
      ${GNSS_SDR_OPTIONAL_HEADERS}
      ${VOLK_GNSSSDR_INCLUDE_DIRS}
+     ${OPT_GNSSSDR_INCLUDE_DIRS}
 )
 
 add_definitions( -DGNSS_SDR_VERSION="${VERSION}" )

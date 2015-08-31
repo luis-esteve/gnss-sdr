@@ -16,6 +16,10 @@
 # along with GNSS-SDR. If not, see <http://www.gnu.org/licenses/>.
 #
 
+if(ENABLE_CUDA)
+     set(OPT_TRACKING_ADAPTERS ${OPT_TRACKING_ADAPTERS} gps_l1_ca_dll_pll_tracking_gpu.cc)
+     set(OPT_TRACKING_INCLUDE_DIRS ${OPT_TRACKING_INCLUDE_DIRS} ${CUDA_INCLUDE_DIRS})
+endif(ENABLE_CUDA)
 
 set(TRACKING_ADAPTER_SOURCES 
      galileo_e1_dll_pll_veml_tracking.cc
@@ -28,6 +32,7 @@ set(TRACKING_ADAPTER_SOURCES
      gps_l1_ca_tcp_connector_tracking.cc
      galileo_e5a_dll_pll_tracking.cc
      gps_l2_m_dll_pll_tracking.cc
+     ${OPT_TRACKING_ADAPTERS}
 )
 
 include_directories(
@@ -41,6 +46,7 @@ include_directories(
      ${GLOG_INCLUDE_DIRS}
      ${GFlags_INCLUDE_DIRS}
      ${GNURADIO_RUNTIME_INCLUDE_DIRS}
+     ${OPT_TRACKING_INCLUDE_DIRS}
 )
 
 file(GLOB TRACKING_ADAPTER_HEADERS "*.h")
