@@ -826,8 +826,8 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
                     mxDestroyArray(m_epl_corr);
                 }
             }
+            d_matlab_count++;
         }
-    d_matlab_count++;
     consume_each(d_current_prn_length_samples); // this is necessary in gr::block derivates
     d_sample_counter += d_current_prn_length_samples; //count for the processed samples
     return 1; //output tracking result ALWAYS even in the case of d_enable_tracking==false
