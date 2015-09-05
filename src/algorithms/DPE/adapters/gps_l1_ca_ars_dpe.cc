@@ -72,12 +72,12 @@ GpsL1CaArsDpe::GpsL1CaArsDpe(ConfigurationInterface* configuration,
     // make PVT object
     dpe_ = gps_l1_ca_make_ars_dpe_cc(in_streams_, queue_, dump_, dump_filename_, output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname);
     DLOG(INFO) << "pvt(" << dpe_->unique_id() << ")";
+    start();
 }
 
 
 GpsL1CaArsDpe::~GpsL1CaArsDpe()
 {}
-
 
 void GpsL1CaArsDpe::connect(gr::top_block_sptr top_block)
 {
@@ -85,7 +85,6 @@ void GpsL1CaArsDpe::connect(gr::top_block_sptr top_block)
 	// Nothing to connect internally
     DLOG(INFO) << "nothing to connect internally";
 }
-
 
 void GpsL1CaArsDpe::disconnect(gr::top_block_sptr top_block)
 {
@@ -97,7 +96,6 @@ gr::basic_block_sptr GpsL1CaArsDpe::get_left_block()
 {
     return dpe_;
 }
-
 
 gr::basic_block_sptr GpsL1CaArsDpe::get_right_block()
 {

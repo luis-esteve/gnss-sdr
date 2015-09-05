@@ -55,6 +55,8 @@ extern concurrent_map<Sbas_Ionosphere_Correction> global_sbas_iono_map;
 extern concurrent_map<Sbas_Satellite_Correction> global_sbas_sat_corr_map;
 extern concurrent_map<Sbas_Ephemeris> global_sbas_ephemeris_map;
 
+extern concurrent_queue<double[5]> global_dpe_msg_queue;
+
 gps_l1_ca_ars_dpe_cc_sptr
 gps_l1_ca_make_ars_dpe_cc(unsigned int nchannels, boost::shared_ptr<gr::msg_queue> queue, bool dump, std::string dump_filename, int output_rate_ms, int display_rate_ms, bool flag_nmea_tty_port, std::string nmea_dump_filename, std::string nmea_dump_devname)
 {

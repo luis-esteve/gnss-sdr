@@ -131,6 +131,9 @@ concurrent_map<Sbas_Ionosphere_Correction> global_sbas_iono_map;
 concurrent_map<Sbas_Satellite_Correction> global_sbas_sat_corr_map;
 concurrent_map<Sbas_Ephemeris> global_sbas_ephemeris_map;
 
+// For DPE
+concurrent_queue<double[5]> global_dpe_msg_queue;
+
 int main(int argc, char** argv)
 {
     const std::string intro_help(
