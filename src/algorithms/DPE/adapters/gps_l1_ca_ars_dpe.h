@@ -2,8 +2,7 @@
  * \file gps_l1_ca_ars_dpe.h
  * \brief Interface of an adapter of a DPE block to a GNSSBlockInterface
  * 
- * Position Velocity and Time
- * \author Javier Arribas, 2011. jarribas(at)cttc.es
+ * \author Luis Esteve, 2015. luis.esteve.elfau@gmail.com 
  *
  *
  * -------------------------------------------------------------------------
@@ -38,7 +37,7 @@
 
 #include <string>
 #include <gnuradio/msg_queue.h>
-#include "block_interface.h"
+#include "gnss_block_interface.h"
 #include "gps_l1_ca_ars_dpe_cc.h"
 
 
@@ -86,7 +85,7 @@ public:
     }
 
 private:
-    gps_l1_ca_ars_dpe_sptr dpe_;
+    gps_l1_ca_ars_dpe_cc_sptr dpe_;
     bool dump_;
     std::string dump_filename_;
     std::string role_;

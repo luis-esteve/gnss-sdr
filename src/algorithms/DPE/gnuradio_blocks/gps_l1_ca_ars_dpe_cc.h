@@ -27,8 +27,8 @@
  * -------------------------------------------------------------------------
  */
 
-#ifndef GNSS_SDR_gps_l1_ca_ars_dpe_cc_H
-#define	GNSS_SDR_gps_l1_ca_ars_dpe_cc_H
+#ifndef GNSS_SDR_GPS_L1_CA_ARS_DPE_CC_H
+#define	GNSS_SDR_GPS_L1_CA_ARS_DPE_CC_H
 
 #include <fstream>
 #include <queue>
@@ -81,8 +81,6 @@ private:
                      boost::shared_ptr<gr::msg_queue> queue,
                      bool dump,
                      std::string dump_filename,
-                     int averaging_depth,
-                     bool flag_averaging,
                      int output_rate_ms,
                      int display_rate_ms,
                      bool flag_nmea_tty_port,

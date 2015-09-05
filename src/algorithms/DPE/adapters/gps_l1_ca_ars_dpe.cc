@@ -70,8 +70,8 @@ GpsL1CaArsDpe::GpsL1CaArsDpe(ConfigurationInterface* configuration,
     std::string nmea_dump_devname;
     nmea_dump_devname = configuration->property(role + ".nmea_dump_devname", default_nmea_dump_devname);
     // make PVT object
-    pvt_ = gps_l1_ca_make_pvt_cc(in_streams_, queue_, dump_, dump_filename_, output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname);
-    DLOG(INFO) << "pvt(" << pvt_->unique_id() << ")";
+    dpe_ = gps_l1_ca_make_ars_dpe_cc(in_streams_, queue_, dump_, dump_filename_, output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname);
+    DLOG(INFO) << "pvt(" << dpe_->unique_id() << ")";
 }
 
 

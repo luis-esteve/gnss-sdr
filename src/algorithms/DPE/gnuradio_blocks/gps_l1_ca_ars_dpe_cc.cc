@@ -95,7 +95,6 @@ gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
     dump_ls_pvt_filename.append("_ls_pvt.dat");
 
     d_ls_pvt = std::make_shared<gps_l1_ca_ls_pvt>((int)nchannels, dump_ls_pvt_filename, d_dump);
-    d_ls_pvt->set_averaging_depth(d_averaging_depth);
 
     d_sample_counter = 0;
     d_last_sample_nav_output = 0;
@@ -139,13 +138,13 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
     Gnss_Synchro **in = (Gnss_Synchro **)  &input_items[0]; //Get the input pointer
     //Gnss_Synchro **out = (Gnss_Synchro **)  &output_items[0]; //Get the output pointer
 
-    for (unsigned int i = 0; i < d_nchannels; i++)
-        {
-            if (in[i][0].Flag_valid_pseudorange == true)
-                {
-                    gnss_pseudoranges_map.insert(std::pair<int,Gnss_Synchro>(in[i][0].PRN, in[i][0])); // store valid pseudoranges in a map
-                }
-        }
+    // for (unsigned int i = 0; i < d_nchannels; i++)
+    //     {
+    //         if (in[i][0].Flag_valid_pseudorange == true)
+    //             {
+    //                 gnss_pseudoranges_map.insert(std::pair<int,Gnss_Synchro>(in[i][0].PRN, in[i][0])); // store valid pseudoranges in a map
+    //             }
+    //     }
 
 
 
@@ -220,9 +219,9 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
 
     // ############ 3. Read the que for a valid position ################################
 
-    
-    
-    if (gnss_pseudoranges_map.size() > 0 and d_ls_pvt->gps_ephemeris_map.size() > 0)
+
+
+/*    if (gnss_pseudoranges_map.size() > 0 and d_ls_pvt->gps_ephemeris_map.size() > 0)
         {
             // compute on the fly PVT solution
             //mod 8/4/2012 Set the PVT computation rate in this block
@@ -306,7 +305,7 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
                             LOG(WARNING) << "Exception writing observables dump file " << e.what();
                     }
                 }
-        }
+        }*/
 
     consume_each(1); //one by one
     return noutput_items;
