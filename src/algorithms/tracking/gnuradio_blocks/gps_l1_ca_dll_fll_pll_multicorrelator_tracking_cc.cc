@@ -446,6 +446,10 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
                     current_synchro_data.Carrier_phase_rads = 0.0;
                     current_synchro_data.Code_phase_secs = 0.0;
                     current_synchro_data.CN0_dB_hz = 0.0;
+                    for (unsigned int i = 0; i < d_num_correlators; i++)
+                        {
+                            current_synchro_data.Multi_correlation[i] = d_output[i];
+                        }
                     current_synchro_data.Flag_valid_tracking = false;
                     current_synchro_data.Flag_valid_pseudorange = false;
 
@@ -620,8 +624,19 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
             current_synchro_data.Carrier_phase_rads = d_acc_carrier_phase_rad;
             current_synchro_data.Carrier_Doppler_hz = d_carrier_doppler_hz;
             current_synchro_data.CN0_dB_hz = d_CN0_SNV_dB_Hz;
+            for (unsigned int i = 0; i < 25; i++)
+            {
+                 if(i < d_num_correlators)
+                 {
+                    current_synchro_data.Multi_correlation[i] = d_output[i];
+                 }
+                 else
+                 {
+                    current_synchro_data.Multi_correlation[i] = gr_complex(0,0);
+                 } 
+            }
             current_synchro_data.Flag_valid_tracking = true;
-             current_synchro_data.Flag_valid_pseudorange = false;
+            current_synchro_data.Flag_valid_pseudorange = false;
             *out[0] = current_synchro_data;
         }
     else
@@ -657,6 +672,7 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
             }
 
             Gnss_Synchro **out = (Gnss_Synchro **) &output_items[0]; //block output streams pointer
+            d_acquisition_gnss_synchro->Flag_valid_tracking = false;
             d_acquisition_gnss_synchro->Flag_valid_pseudorange = false;
             *out[0] = *d_acquisition_gnss_synchro;
         }

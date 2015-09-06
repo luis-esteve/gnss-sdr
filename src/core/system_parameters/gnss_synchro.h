@@ -58,7 +58,7 @@ public:
     double Carrier_phase_rads;      //!< Set by Tracking processing block
     double Code_phase_secs;         //!< Set by Tracking processing block
     double Tracking_timestamp_secs; //!< Set by Tracking processing block
-    double Multi_correlation[25];   //!< Set by Tracking processing block
+    std::complex<float> Multi_correlation[25];   //!< Set by Tracking processing block
     bool Flag_valid_tracking;
 
     //Telemetry Decoder
