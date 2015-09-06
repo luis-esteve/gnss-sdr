@@ -98,6 +98,7 @@
 #include "gps_l1_ca_pvt.h"
 #include "galileo_e1_pvt.h"
 #include "hybrid_pvt.h"
+#include "gps_l1_ca_ars_dpe.h"
 
 #if OPENCL_BLOCKS
 #include "gps_l1_ca_pcps_opencl_acquisition.h"
@@ -268,7 +269,27 @@ std::unique_ptr<GNSSBlockInterface> GNSSBlockFactory::GetPVT(std::shared_ptr<Con
     return GetBlock(configuration, "PVT", implementation, Galileo_channels + GPS_channels, 1, queue);
 }
 
-
+std::unique_ptr<GNSSBlockInterface> GNSSBlockFactory::GetDPE(
+        std::shared_ptr<ConfigurationInterface> configuration, boost::shared_ptr<gr::msg_queue> queue)
+{
+    std::string default_implementation = "GPS_L1_CA_ARS_DPE";
+    std::string role = "DPE"; //backwards compatibility for old conf files
+    std::string implementation = configuration->property(role + ".implementation", default_implementation);
+    LOG(INFO) << "Getting " << role << " with implementation " << implementation;
+    unsigned int Galileo_channels = configuration->property("Channels_Galileo.count", 0); // DEPRECATED
+    if(Galileo_channels == 0)
+        {
+            Galileo_channels = configuration->property("Channels_1B.count", 0);
+        }
+    Galileo_channels += configuration->property("Channels_5X.count", 0);
+    unsigned int GPS_channels = configuration->property("Channels_GPS.count", 0); // DEPRECATED
+    if(GPS_channels == 0)
+        {
+            GPS_channels = configuration->property("Channels_1C.count", 0);
+        }
+    GPS_channels += configuration->property("Channels_2S.count", 0);
+    return GetBlock(configuration, role, implementation,  Galileo_channels + GPS_channels, 0, queue);
+}
 
 std::unique_ptr<GNSSBlockInterface> GNSSBlockFactory::GetOutputFilter(std::shared_ptr<ConfigurationInterface> configuration,
         boost::shared_ptr<gr::msg_queue> queue)
@@ -1417,6 +1438,13 @@ std::unique_ptr<GNSSBlockInterface> GNSSBlockFactory::GetBlock(
                     out_streams, queue));
             block = std::move(block_);
         }
+    // DPE -------------------------------------------------------------------------
+    else if (implementation.compare("GPS_L1_CA_ARS_DPE") == 0)
+        {
+            std::unique_ptr<GNSSBlockInterface> block_(new GpsL1CaArsDpe(configuration.get(), role, in_streams,
+                    out_streams, queue));
+            block = std::move(block_);
+        }        
     // OUTPUT FILTERS --------------------------------------------------------------
     else if (implementation.compare("Null_Sink_Output_Filter") == 0)
         {

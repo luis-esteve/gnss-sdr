@@ -65,7 +65,7 @@ public:
     //!  Returns "GPS_L1_CA_PVT"
     std::string implementation()
     {
-        return "GPS_L1_CA_PVT";
+        return "GPS_L1_CA_ARS_DPE";
     }
 
     void connect(gr::top_block_sptr top_block);

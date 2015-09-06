@@ -394,6 +394,17 @@ TEST(GNSS_Block_Factory_Test, InstantiateWrongPvt)
 }
 
 
+TEST(GNSS_Block_Factory_Test, InstantiateGpsL1CaArsDpe)
+{
+    std::shared_ptr<InMemoryConfiguration> configuration = std::make_shared<InMemoryConfiguration>();
+    configuration->set_property("DPE.implementation", "GPS_L1_CA_ARS_DPE");
+    gr::msg_queue::sptr queue = gr::msg_queue::make(0);
+    std::unique_ptr<GNSSBlockFactory> factory;
+    std::shared_ptr<GNSSBlockInterface> dpe_ = factory->GetDPE(configuration, queue);
+    EXPECT_STREQ("DPE", dpe_->role().c_str());
+    EXPECT_STREQ("GPS_L1_CA_ARS_DPE", dpe_->implementation().c_str());
+}
+
 
 TEST(GNSS_Block_Factory_Test, InstantiateNullSinkOutputFilter)
 {
