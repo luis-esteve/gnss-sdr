@@ -84,9 +84,9 @@ endif(NOT ${THIS_IS_A_RELEASE})
 set(VERSION_INFO_MAJOR_VERSION 0)
 set(VERSION_INFO_API_COMPAT    0)
 if(${THIS_IS_A_RELEASE})
-    set(VERSION_INFO_MINOR_VERSION 5)
+    set(VERSION_INFO_MINOR_VERSION 6)
 else(${THIS_IS_A_RELEASE})
-    set(VERSION_INFO_MINOR_VERSION 5.git-${GIT_BRANCH}-${GIT_COMMIT_HASH})
+    set(VERSION_INFO_MINOR_VERSION 6.git-${GIT_BRANCH}-${GIT_COMMIT_HASH})
 endif(${THIS_IS_A_RELEASE})
 
 set(VERSION ${VERSION_INFO_MAJOR_VERSION}.${VERSION_INFO_API_COMPAT}.${VERSION_INFO_MINOR_VERSION})
@@ -419,7 +419,14 @@ if(OS_IS_MACOSX)
     endif(CMAKE_GENERATOR STREQUAL Xcode)
 endif(OS_IS_MACOSX)
 if(NOT VOLK_GNSSSDR_FOUND)
-    set(VOLK_GNSSSDR_CMAKE_ARGS -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER} -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER} -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/volk_gnsssdr_module/install -DENABLE_STATIC_LIBS=ON ${STRIP_VOLK_GNSSSDR_PROFILE} ${USE_THIS_PYTHON})
+    set(VOLK_GNSSSDR_CMAKE_ARGS -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                                -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                                -DCMAKE_INSTALL_PREFIX=${CMAKE_CURRENT_BINARY_DIR}/volk_gnsssdr_module/install
+                                -DENABLE_STATIC_LIBS=ON
+                                -DCMAKE_CXX_FLAGS=${CMAKE_CXX_FLAGS}
+                                -DCMAKE_C_FLAGS=${CMAKE_C_FLAGS}
+                                ${STRIP_VOLK_GNSSSDR_PROFILE} 
+                                ${USE_THIS_PYTHON} )
     if(CMAKE_TOOLCHAIN_FILE)
         set(VOLK_GNSSSDR_CMAKE_ARGS ${VOLK_GNSSSDR_CMAKE_ARGS} -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE})
     endif(CMAKE_TOOLCHAIN_FILE)
@@ -720,8 +727,8 @@ if(NOT ARMADILLO_FOUND)
      message(STATUS " Armadillo will be downloaded and built automatically ")
      message(STATUS " when doing 'make'. ")
 
-     set(armadillo_RELEASE 5.400.2)
-     set(armadillo_MD5 "0f06e5ddef5a3a8ef86f3a7bc480dec3")
+     set(armadillo_RELEASE 5.400.3)
+     set(armadillo_MD5 "397733eb2f305b50f28ead3350d975bd")
 
      ExternalProject_Add(
          armadillo-${armadillo_RELEASE}
