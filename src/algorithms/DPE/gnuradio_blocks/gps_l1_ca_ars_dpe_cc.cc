@@ -73,7 +73,7 @@ gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
         std::string nmea_dump_filename,
         std::string nmea_dump_devname) :
              gr::block("gps_l1_ca_ars_dpe_cc", gr::io_signature::make(nchannels, nchannels,  sizeof(Gnss_Synchro)),
-             gr::io_signature::make(1, 1, sizeof(gr_complex)) )
+             gr::io_signature::make(0, 0, sizeof(gr_complex)) )
 {
     d_output_rate_ms = output_rate_ms;
     d_display_rate_ms = display_rate_ms;
@@ -219,7 +219,9 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
     //     }
 
 
+
     // ############ 3. Read the que for a valid position ################################
+
 
 
 

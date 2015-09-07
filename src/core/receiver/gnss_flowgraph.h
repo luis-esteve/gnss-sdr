@@ -131,6 +131,7 @@ private:
     std::shared_ptr<GNSSBlockInterface> observables_;
     std::shared_ptr<GNSSBlockInterface> pvt_;
     std::shared_ptr<GNSSBlockInterface> output_filter_;
+    std::shared_ptr<GNSSBlockInterface> dpe_;
 
     std::vector<std::shared_ptr<ChannelInterface>> channels_;
     gr::top_block_sptr top_block_;

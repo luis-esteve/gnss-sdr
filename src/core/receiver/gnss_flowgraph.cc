@@ -103,6 +103,11 @@ void GNSSFlowgraph::connect()
     /* Connects the blocks in the flowgraph
      *
      * Signal Source > Signal conditioner >> Channels >> Observables >> PVT > Output filter
+     * 
+     * If Direct Positon Estimation is enable:
+     * 
+     * Signal Source > Signal conditioner >> Channels >> DPE
+     *
      */
     LOG(INFO) << "Connecting flowgraph";
     if (connected_)
@@ -194,6 +199,24 @@ void GNSSFlowgraph::connect()
             top_block_->disconnect_all();
             return;
     }
+
+    bool dpe_enable = configuration_->property(dpe_->role() + ".enable", false);
+    if(dpe_enable)
+    {
+            // Signal Source > Signal conditioner >> Channels >> Observables > DPE
+        try
+        {
+            dpe_->connect(top_block_);
+        }
+        catch (std::exception& e)
+        {
+            LOG(WARNING) << "Can't connect DPE block internally";
+            LOG(ERROR) << e.what();
+            top_block_->disconnect_all();
+            return;
+        }
+    }
+
 
     DLOG(INFO) << "blocks connected internally";
 
@@ -325,6 +348,23 @@ void GNSSFlowgraph::connect()
                 {
                     LOG(INFO) << "Channel " << i << " connected to observables in standby mode";
                 }
+
+            if(dpe_enable)
+            {
+                // Signal Source > Signal conditioner >> Channels >> DPE
+                try
+                {
+                    top_block_->connect(channels_.at(i)->get_right_block(), 0,
+                            dpe_->get_left_block(), i);
+                }
+                catch (std::exception& e)
+                {
+                    LOG(WARNING) << "Can't connect channel " << i << " to DPE";
+                    LOG(ERROR) << e.what();
+                    top_block_->disconnect_all();
+                    return;
+                }
+            }
         }
 
     /*
@@ -531,6 +571,7 @@ void GNSSFlowgraph::init()
 
     observables_ = block_factory_->GetObservables(configuration_, queue_);
     pvt_ = block_factory_->GetPVT(configuration_, queue_);
+    dpe_ = block_factory_->GetDPE(configuration_, queue_);
     output_filter_ = block_factory_->GetOutputFilter(configuration_, queue_);
 
     std::shared_ptr<std::vector<std::unique_ptr<GNSSBlockInterface>>> channels = block_factory_->GetChannels(configuration_, queue_);
