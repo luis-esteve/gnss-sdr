@@ -59,6 +59,7 @@ gps_l1_ca_ls_pvt::gps_l1_ca_ls_pvt(int nchannels, std::string dump_filename, boo
     d_x_m = 0.0;
     d_y_m = 0.0;
     d_z_m = 0.0;
+    d_dt_s = 0.0;
     d_GDOP = 0.0;
     d_PDOP = 0.0;
     d_HDOP = 0.0;
@@ -435,6 +436,14 @@ bool gps_l1_ca_ls_pvt::get_PVT(std::map<int,Gnss_Synchro> gnss_pseudoranges_map,
                             LOG(WARNING) << "Exception writing PVT LS dump file " << e.what();
                     }
                 }
+
+            // RECORDING RESULTS FOR DPE
+
+            d_x_m = mypos(0);
+            d_y_m = mypos(1);
+            d_z_m = mypos(2);
+            d_dt_s = mypos(3);
+
 
             // MOVING AVERAGE PVT
             if (flag_averaging == true)

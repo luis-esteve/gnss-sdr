@@ -67,6 +67,7 @@
 #include "sbas_satellite_correction.h"
 #include "sbas_ephemeris.h"
 #include "sbas_time.h"
+#include "dpe_motion_parameters.h"
 
 #if CUDA_GPU_ACCEL
 	// For the CUDA runtime routines (prefixed with "cuda_")
@@ -132,7 +133,7 @@ concurrent_map<Sbas_Satellite_Correction> global_sbas_sat_corr_map;
 concurrent_map<Sbas_Ephemeris> global_sbas_ephemeris_map;
 
 // For DPE
-concurrent_queue<double[5]> global_dpe_msg_queue;
+concurrent_queue<Dpe_Motion_Parameters> global_dpe_msg_queue;
 
 int main(int argc, char** argv)
 {

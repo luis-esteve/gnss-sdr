@@ -43,6 +43,7 @@
 #include "concurrent_map.h"
 #include "sbas_telemetry_data.h"
 #include "sbas_ionospheric_correction.h"
+#include "dpe_motion_parameters.h"
 
 using google::LogMessage;
 
@@ -55,12 +56,25 @@ extern concurrent_map<Sbas_Ionosphere_Correction> global_sbas_iono_map;
 extern concurrent_map<Sbas_Satellite_Correction> global_sbas_sat_corr_map;
 extern concurrent_map<Sbas_Ephemeris> global_sbas_ephemeris_map;
 
+extern concurrent_queue<Dpe_Motion_Parameters> global_dpe_msg_queue;
+
 gps_l1_ca_pvt_cc_sptr
-gps_l1_ca_make_pvt_cc(unsigned int nchannels, boost::shared_ptr<gr::msg_queue> queue, bool dump, std::string dump_filename, int averaging_depth, bool flag_averaging, int output_rate_ms, int display_rate_ms, bool flag_nmea_tty_port, std::string nmea_dump_filename, std::string nmea_dump_devname)
+gps_l1_ca_make_pvt_cc(unsigned int nchannels, boost::shared_ptr<gr::msg_queue> queue, bool dump, 
+    std::string dump_filename, int averaging_depth, bool flag_averaging, int output_rate_ms, int display_rate_ms, 
+    bool flag_nmea_tty_port, std::string nmea_dump_filename, std::string nmea_dump_devname)
 {
-    return gps_l1_ca_pvt_cc_sptr(new gps_l1_ca_pvt_cc(nchannels, queue, dump, dump_filename, averaging_depth, flag_averaging, output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname));
+    return gps_l1_ca_pvt_cc_sptr(new gps_l1_ca_pvt_cc(nchannels, queue, dump, dump_filename, averaging_depth, 
+        flag_averaging, output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname));
 }
 
+gps_l1_ca_pvt_cc_sptr
+gps_l1_ca_make_pvt_cc(unsigned int nchannels, boost::shared_ptr<gr::msg_queue> queue, bool dump, 
+    std::string dump_filename, int averaging_depth, bool flag_averaging, int output_rate_ms, int display_rate_ms, 
+    bool flag_nmea_tty_port, std::string nmea_dump_filename, std::string nmea_dump_devname, bool enable_dpe)
+{
+    return gps_l1_ca_pvt_cc_sptr(new gps_l1_ca_pvt_cc(nchannels, queue, dump, dump_filename, averaging_depth, 
+        flag_averaging, output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname, enable_dpe));
+}
 
 gps_l1_ca_pvt_cc::gps_l1_ca_pvt_cc(unsigned int nchannels,
         boost::shared_ptr<gr::msg_queue> queue,
@@ -110,6 +124,8 @@ gps_l1_ca_pvt_cc::gps_l1_ca_pvt_cc(unsigned int nchannels,
     b_rinex_sbs_header_writen = false;
     rp = std::make_shared<Rinex_Printer>();
 
+    d_enable_dpe = false;
+
     // ############# ENABLE DATA FILE LOG #################
     if (d_dump == true)
         {
@@ -129,6 +145,75 @@ gps_l1_ca_pvt_cc::gps_l1_ca_pvt_cc(unsigned int nchannels,
         }
 }
 
+gps_l1_ca_pvt_cc::gps_l1_ca_pvt_cc(unsigned int nchannels,
+        boost::shared_ptr<gr::msg_queue> queue,
+        bool dump, std::string dump_filename,
+        int averaging_depth,
+        bool flag_averaging,
+        int output_rate_ms,
+        int display_rate_ms,
+        bool flag_nmea_tty_port,
+        std::string nmea_dump_filename,
+        std::string nmea_dump_devname,
+        bool enable_dpe) :
+             gr::block("gps_l1_ca_pvt_cc", gr::io_signature::make(nchannels, nchannels,  sizeof(Gnss_Synchro)),
+             gr::io_signature::make(1, 1, sizeof(gr_complex)) )
+{
+    d_output_rate_ms = output_rate_ms;
+    d_display_rate_ms = display_rate_ms;
+    d_queue = queue;
+    d_dump = dump;
+    d_nchannels = nchannels;
+    d_dump_filename = dump_filename;
+    std::string dump_ls_pvt_filename = dump_filename;
+
+    //initialize kml_printer
+    std::string kml_dump_filename;
+    kml_dump_filename = d_dump_filename;
+    kml_dump_filename.append(".kml");
+    d_kml_dump = std::make_shared<Kml_Printer>();
+    d_kml_dump->set_headers(kml_dump_filename);
+
+    //initialize nmea_printer
+    d_nmea_printer = std::make_shared<Nmea_Printer>(nmea_dump_filename, flag_nmea_tty_port, nmea_dump_devname);
+
+    d_dump_filename.append("_raw.dat");
+    dump_ls_pvt_filename.append("_ls_pvt.dat");
+    d_averaging_depth = averaging_depth;
+    d_flag_averaging = flag_averaging;
+
+    d_ls_pvt = std::make_shared<gps_l1_ca_ls_pvt>((int)nchannels, dump_ls_pvt_filename, d_dump);
+    d_ls_pvt->set_averaging_depth(d_averaging_depth);
+
+    d_sample_counter = 0;
+    d_last_sample_nav_output = 0;
+    d_rx_time = 0.0;
+
+    b_rinex_header_writen = false;
+    b_rinex_header_updated = false;
+    b_rinex_sbs_header_writen = false;
+    rp = std::make_shared<Rinex_Printer>();
+
+    b_enable_dpe = enable_dpe;
+
+    // ############# ENABLE DATA FILE LOG #################
+    if (d_dump == true)
+        {
+            if (d_dump_file.is_open() == false)
+                {
+                    try
+                    {
+                            d_dump_file.exceptions (std::ifstream::failbit | std::ifstream::badbit );
+                            d_dump_file.open(d_dump_filename.c_str(), std::ios::out | std::ios::binary);
+                            LOG(INFO) << "PVT dump enabled Log file: " << d_dump_filename.c_str();
+                    }
+                    catch (std::ifstream::failure e)
+                    {
+                            LOG(INFO) << "Exception opening PVT dump file " << e.what();
+                    }
+                }
+        }
+}
 
 
 gps_l1_ca_pvt_cc::~gps_l1_ca_pvt_cc()
@@ -296,6 +381,10 @@ int gps_l1_ca_pvt_cc::general_work (int noutput_items, gr_vector_int &ninput_ite
                                             rp->update_nav_header(rp->navFile, d_ls_pvt->gps_utc_model, d_ls_pvt->gps_iono);
                                             b_rinex_header_updated = true;
                                         }
+                                }
+                            if(b_enable_dpe)
+                                {
+                                    
                                 }
                         }
                 }

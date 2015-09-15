@@ -43,6 +43,7 @@
 #include "concurrent_map.h"
 #include "sbas_telemetry_data.h"
 #include "sbas_ionospheric_correction.h"
+#include "dpe_motion_parameters.h"
 
 using google::LogMessage;
 
@@ -55,12 +56,15 @@ extern concurrent_map<Sbas_Ionosphere_Correction> global_sbas_iono_map;
 extern concurrent_map<Sbas_Satellite_Correction> global_sbas_sat_corr_map;
 extern concurrent_map<Sbas_Ephemeris> global_sbas_ephemeris_map;
 
-extern concurrent_queue<double[5]> global_dpe_msg_queue;
+extern concurrent_queue<Dpe_Motion_Parameters> global_dpe_msg_queue;
 
 gps_l1_ca_ars_dpe_cc_sptr
-gps_l1_ca_make_ars_dpe_cc(unsigned int nchannels, boost::shared_ptr<gr::msg_queue> queue, bool dump, std::string dump_filename, int output_rate_ms, int display_rate_ms, bool flag_nmea_tty_port, std::string nmea_dump_filename, std::string nmea_dump_devname)
+gps_l1_ca_make_ars_dpe_cc(unsigned int nchannels, boost::shared_ptr<gr::msg_queue> queue, bool dump, 
+    std::string dump_filename, int output_rate_ms, int display_rate_ms, bool flag_nmea_tty_port, 
+    std::string nmea_dump_filename, std::string nmea_dump_devname, unsigned int min_trk_channels)
 {
-    return gps_l1_ca_ars_dpe_cc_sptr(new gps_l1_ca_ars_dpe_cc(nchannels, queue, dump, dump_filename, output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname));
+    return gps_l1_ca_ars_dpe_cc_sptr(new gps_l1_ca_ars_dpe_cc(nchannels, queue, dump, dump_filename, 
+        output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname, min_trk_channels));
 }
 
 
@@ -71,7 +75,8 @@ gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
         int display_rate_ms,
         bool flag_nmea_tty_port,
         std::string nmea_dump_filename,
-        std::string nmea_dump_devname) :
+        std::string nmea_dump_devname,
+        unsigned int min_trk_channels) :
              gr::block("gps_l1_ca_ars_dpe_cc", gr::io_signature::make(nchannels, nchannels,  sizeof(Gnss_Synchro)),
              gr::io_signature::make(0, 0, sizeof(gr_complex)) )
 {
@@ -101,6 +106,10 @@ gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
     d_sample_counter = 0;
     d_last_sample_nav_output = 0;
     d_rx_time = 0.0;
+
+    d_min_trk_channels = min_trk_channels;
+
+    d_dpe_standby = true;
 
     // b_rinex_header_writen = false;
     // b_rinex_header_updated = false;
@@ -148,37 +157,68 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
     //             }
     //     }
 
+    Dpe_Motion_Parameters current_dpe_parameters;
 
+    if (d_dpe_standby)
+    {
+        while(global_dpe_msg_queue.try_pop(current_dpe_parameters))
+        {
+            std::cout << "PVT message arrival: x = " << current_dpe_parameters.pos_x_m << std::endl;
+            d_dpe_standby = false;
+        }
+    }
 
-    Gnss_Synchro current_gnss_synchro[d_nchannels];
-    std::map<int,Gnss_Synchro> current_gnss_synchro_map;
-    std::map<int,Gnss_Synchro>::iterator gnss_synchro_iter;
+    if(!d_dpe_standby)
+    {   
+
+        // ############ 1. Empty the message queue ########
+
+        Gnss_Synchro current_gnss_synchro[d_nchannels];
+        std::map<int,Gnss_Synchro> current_gnss_synchro_map;
+        std::map<int,Gnss_Synchro>::iterator gnss_synchro_iter;
 
     
-    // ############ 1. Read the GNSS SYNCHRO objects from available channels ########
+        // ############ 2. Read the GNSS SYNCHRO objects from available tracking channels ########
 
+        unsigned int trk_channels = 0;
+        for (unsigned int i = 0; i < d_nchannels; i++)
+            {
 
-    for (unsigned int i = 0; i < d_nchannels; i++)
-        {
-            //Copy the telemetry decoder data to local copy
-            current_gnss_synchro[i] = in[i][0]; // es necesario?
+                //Copy the telemetry decoder data to local copy
+                current_gnss_synchro[i] = in[i][0]; // es necesario?
  
-            if (current_gnss_synchro[i].Flag_valid_word) //if this channel have valid word
+                if (current_gnss_synchro[i].Flag_valid_tracking) //if this channel is in tracking mode
                 {
+                    trk_channels++;
                     //record the word structure in a map for pseudorange computation
                     current_gnss_synchro_map.insert(std::pair<int, Gnss_Synchro>(current_gnss_synchro[i].Channel_ID, current_gnss_synchro[i])); // guardo el channel_ID o el PRN?
                     d_rx_time = in[i][0].d_TOW_at_current_symbol; // all the channels have the same RX timestamp (common RX time pseudoranges) // lo necesito?
 
                 }
+            }
+
+        if(d_min_trk_channels > trk_channels)
+        {
+                // ############ 3. READ EPHEMERIS/UTC_MODE/IONO FROM GLOBAL MAPS ####
+
+                d_ls_pvt->gps_ephemeris_map = global_gps_ephemeris_map.get_map_copy();
+
+                // ############ 4. Execute DPE algorithm
+                std::cout << "Executing DPE" << std::endl;
+        }else
+        {
+            d_dpe_standby = true;
+            std::cout << "DPE lost of lock, request PVT " << std::endl;
         }
 
+        while(global_dpe_msg_queue.try_pop(current_dpe_parameters)) {}
 
 
 
 
-    // ############ 2. READ EPHEMERIS/UTC_MODE/IONO FROM GLOBAL MAPS ####
+        // ############ 3. Read PVT raw messages directly from queue
+    
 
-    d_ls_pvt->gps_ephemeris_map = global_gps_ephemeris_map.get_map_copy();
 
     // if (global_gps_utc_model_map.size() > 0)
     //     {
@@ -309,7 +349,9 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
                             LOG(WARNING) << "Exception writing observables dump file " << e.what();
                     }
                 }
-        }*/
+        }*/ 
+    }
+
 
     consume_each(1); //one by one
     return noutput_items;

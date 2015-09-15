@@ -184,7 +184,7 @@ int gps_l1_ca_telemetry_decoder_cc::general_work (int noutput_items, gr_vector_i
 
     // TODO Optimize me!
     //******* preamble correlation ********
-    for (unsigned int i = 0; i < d_samples_per_bit*8; i++)
+    for (unsigned int i = 0; i < d_samples_per_bit*GPS_CA_PREAMBLE_LENGTH_BITS; i++)
         {
             if (in[0][i].Prompt_I < 0)	// symbols clipping
                 {

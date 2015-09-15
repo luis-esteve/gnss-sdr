@@ -73,8 +73,19 @@ GpsL1CaPvt::GpsL1CaPvt(ConfigurationInterface* configuration,
     nmea_dump_filename = configuration->property(role + ".nmea_dump_filename", default_nmea_dump_filename);
     std::string nmea_dump_devname;
     nmea_dump_devname = configuration->property(role + ".nmea_dump_devname", default_nmea_dump_devname);
+    bool dpe_enable;
+    dpe_enable = configuration_->property(dpe_->role() + ".enable", false);
+
     // make PVT object
-    pvt_ = gps_l1_ca_make_pvt_cc(in_streams_, queue_, dump_, dump_filename_, averaging_depth, flag_averaging, output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname);
+    if(dpe_enable)
+    {
+        pvt_ = gps_l1_ca_make_pvt_cc(in_streams_, queue_, dump_, dump_filename_, averaging_depth, flag_averaging, 
+            output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname, dpe_enable);
+    }else
+    {
+        pvt_ = gps_l1_ca_make_pvt_cc(in_streams_, queue_, dump_, dump_filename_, averaging_depth, flag_averaging, 
+            output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname);
+    }
     DLOG(INFO) << "pvt(" << pvt_->unique_id() << ")";
 }
 

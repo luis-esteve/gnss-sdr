@@ -201,6 +201,7 @@ void GNSSFlowgraph::connect()
     }
 
     bool dpe_enable = configuration_->property(dpe_->role() + ".enable", false);
+    std::cout << "dpe_enable = " << dpe_enable << std::endl;
     if(dpe_enable)
     {
             // Signal Source > Signal conditioner >> Channels >> Observables > DPE
@@ -356,6 +357,7 @@ void GNSSFlowgraph::connect()
                 {
                     top_block_->connect(channels_.at(i)->get_right_block(), 0,
                             dpe_->get_left_block(), i);
+                    DLOG(INFO) << "Channel " << i << " connected to DPE";
                 }
                 catch (std::exception& e)
                 {

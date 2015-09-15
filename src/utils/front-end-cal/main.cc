@@ -73,6 +73,7 @@
 #include "sbas_ephemeris.h"
 #include "sbas_time.h"
 #include "gnss_sdr_supl_client.h"
+#include "dpe_motion_parameters.h"
 
 
 #include "front_end_cal.h"
@@ -126,6 +127,9 @@ concurrent_queue<Sbas_Ephemeris> global_sbas_ephemeris_queue;
 concurrent_map<Sbas_Ionosphere_Correction> global_sbas_iono_map;
 concurrent_map<Sbas_Satellite_Correction> global_sbas_sat_corr_map;
 concurrent_map<Sbas_Ephemeris> global_sbas_ephemeris_map;
+
+// For DPE
+concurrent_queue<Dpe_Motion_Parameters> global_dpe_msg_queue;
 
 bool stop;
 concurrent_queue<int> channel_internal_queue;

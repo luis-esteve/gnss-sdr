@@ -108,6 +108,8 @@ public:
     double d_y_m;
     double d_z_m;
 
+    double d_dt_s;
+
     // DOP estimations
     arma::mat d_Q;
     double d_GDOP;

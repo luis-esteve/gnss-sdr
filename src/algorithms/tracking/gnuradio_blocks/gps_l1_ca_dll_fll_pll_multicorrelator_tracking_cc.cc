@@ -448,7 +448,7 @@ int Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::general_work (int noutput
                     current_synchro_data.CN0_dB_hz = 0.0;
                     for (unsigned int i = 0; i < d_num_correlators; i++)
                         {
-                            current_synchro_data.Multi_correlation[i] = d_output[i];
+                            current_synchro_data.Multi_correlation[i] = d_output[i]; // TODO: Check if it is necessary or better =0
                         }
                     current_synchro_data.Flag_valid_tracking = false;
                     current_synchro_data.Flag_valid_pseudorange = false;

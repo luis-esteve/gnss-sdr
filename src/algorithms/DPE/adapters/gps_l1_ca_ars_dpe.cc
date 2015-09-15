@@ -69,8 +69,13 @@ GpsL1CaArsDpe::GpsL1CaArsDpe(ConfigurationInterface* configuration,
     nmea_dump_filename = configuration->property(role + ".nmea_dump_filename", default_nmea_dump_filename);
     std::string nmea_dump_devname;
     nmea_dump_devname = configuration->property(role + ".nmea_dump_devname", default_nmea_dump_devname);
+    
+    // Minimum number of channels in tracking to stay in DPE mode
+    unsigned int trk_channels;
+    trk_channels = configuration->property(role + ".min_trk_channels", 4);
     // make PVT object
-    dpe_ = gps_l1_ca_make_ars_dpe_cc(in_streams_, queue_, dump_, dump_filename_, output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname);
+    dpe_ = gps_l1_ca_make_ars_dpe_cc(in_streams_, queue_, dump_, dump_filename_, output_rate_ms, 
+        display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname, trk_channels);
     DLOG(INFO) << "pvt(" << dpe_->unique_id() << ")";
 }
 

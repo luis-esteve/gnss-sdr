@@ -60,7 +60,8 @@ gps_l1_ca_ars_dpe_cc_sptr gps_l1_ca_make_ars_dpe_cc(unsigned int n_channels,
                                             int display_rate_ms,
                                             bool flag_nmea_tty_port,
                                             std::string nmea_dump_filename,
-                                            std::string nmea_dump_devname);
+                                            std::string nmea_dump_devname,
+                                            unsigned int min_trk_channels);
 
 /*!
  * \brief This class implements a block that computes the PVT solution
@@ -76,7 +77,8 @@ private:
                                                        int display_rate_ms,
                                                        bool flag_nmea_tty_port,
                                                        std::string nmea_dump_filename,
-                                                       std::string nmea_dump_devname);
+                                                       std::string nmea_dump_devname,
+                                                       unsigned int min_trk_channels);
     gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
                      boost::shared_ptr<gr::msg_queue> queue,
                      bool dump,
@@ -85,7 +87,8 @@ private:
                      int display_rate_ms,
                      bool flag_nmea_tty_port,
                      std::string nmea_dump_filename,
-                     std::string nmea_dump_devname);
+                     std::string nmea_dump_devname,
+                     unsigned int min_trk_channels);
     boost::shared_ptr<gr::msg_queue> d_queue;
     bool d_dump;
     // bool b_rinex_header_writen;
@@ -103,6 +106,8 @@ private:
     std::shared_ptr<Nmea_Printer> d_nmea_printer;
     double d_rx_time;
     std::shared_ptr<gps_l1_ca_ls_pvt> d_ls_pvt;
+    unsigned int d_min_trk_channels;
+    bool d_dpe_standby;
 
 public:
     ~gps_l1_ca_ars_dpe_cc (); //!< Default destructor
