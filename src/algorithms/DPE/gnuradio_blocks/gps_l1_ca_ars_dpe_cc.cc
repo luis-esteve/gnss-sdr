@@ -173,10 +173,9 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
         while(global_dpe_msg_queue.try_pop(current_dpe_parameters))
         {
             std::cout << "PVT message arrival: Position at " << boost::posix_time::to_simple_string(current_dpe_parameters.position_UTC_time)
-            << "x = " << current_dpe_parameters.pos_x_m << " [m]" << std::endl << "y = " << current_dpe_parameters.pos_y_m 
+            << std::endl << "x = " << current_dpe_parameters.pos_x_m << " [m]" << std::endl << "y = " << current_dpe_parameters.pos_y_m 
             << " [m]" << std::endl << "z = " << current_dpe_parameters.pos_z_m  << " [m]" << std::endl << "user clock error =" 
             << current_dpe_parameters.dt_s << " [s]" << std::endl;
-            std::cout << "PVT message arrival: x = " << current_dpe_parameters.pos_x_m << std::endl;
             d_dpe_standby = false;
         }
     }
