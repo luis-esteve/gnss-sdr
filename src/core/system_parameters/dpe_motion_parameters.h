@@ -32,6 +32,8 @@
 #ifndef GNSS_SDR_DPE_MOTION_PARAMETERS_H_
 #define GNSS_SDR_DPE_MOTION_PARAMETERS_H_
 
+#include <boost/date_time/posix_time/posix_time.hpp>
+
 
 /*!
  * \brief This is the class that contains the information that is shared
@@ -47,7 +49,7 @@ public:
     double pos_z_m;
     double dt_s;
 
-    double t_s;
+    boost::posix_time::ptime position_UTC_time;
 };
 
 #endif

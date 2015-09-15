@@ -74,7 +74,7 @@ GpsL1CaPvt::GpsL1CaPvt(ConfigurationInterface* configuration,
     std::string nmea_dump_devname;
     nmea_dump_devname = configuration->property(role + ".nmea_dump_devname", default_nmea_dump_devname);
     bool dpe_enable;
-    dpe_enable = configuration_->property(dpe_->role() + ".enable", false);
+    dpe_enable = configuration->property("DPE.enable", false);
 
     // make PVT object
     if(dpe_enable)

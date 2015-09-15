@@ -124,7 +124,7 @@ gps_l1_ca_pvt_cc::gps_l1_ca_pvt_cc(unsigned int nchannels,
     b_rinex_sbs_header_writen = false;
     rp = std::make_shared<Rinex_Printer>();
 
-    d_enable_dpe = false;
+    b_enable_dpe = false;
 
     // ############# ENABLE DATA FILE LOG #################
     if (d_dump == true)
@@ -384,7 +384,20 @@ int gps_l1_ca_pvt_cc::general_work (int noutput_items, gr_vector_int &ninput_ite
                                 }
                             if(b_enable_dpe)
                                 {
-                                    
+                                    Dpe_Motion_Parameters current_dpe_parameters;
+                                    current_dpe_parameters.pos_x_m = d_ls_pvt->d_x_m;
+                                    current_dpe_parameters.pos_y_m = d_ls_pvt->d_y_m;
+                                    current_dpe_parameters.pos_z_m = d_ls_pvt->d_z_m;
+                                    current_dpe_parameters.dt_s = d_ls_pvt->d_dt_s;
+                                    current_dpe_parameters.position_UTC_time = d_ls_pvt->d_position_UTC_time;
+                                    try
+                                        {
+                                            global_dpe_msg_queue.push(current_dpe_parameters);
+                                        }
+                                    catch (std::ifstream::failure e)
+                                        {
+                                            LOG(INFO) << "Exception writing in DPE queue " << e.what();
+                                        }
                                 }
                         }
                 }
