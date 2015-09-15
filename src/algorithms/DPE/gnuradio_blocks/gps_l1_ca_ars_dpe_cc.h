@@ -47,6 +47,7 @@
 #include "rinex_printer.h"
 #include "gps_l1_ca_ls_pvt.h"
 #include "GPS_L1_CA.h"
+#include "engine.h"
 
 class gps_l1_ca_ars_dpe_cc;
 
@@ -124,6 +125,10 @@ private:
     unsigned int d_constant_factor;
     unsigned int d_num_iter;
     bool d_dpe_standby;
+    
+    // Matlab representation
+    Engine *d_ep; //Define Matlab engine pointer.
+    bool d_matlab_enable;
 
 public:
     ~gps_l1_ca_ars_dpe_cc (); //!< Default destructor

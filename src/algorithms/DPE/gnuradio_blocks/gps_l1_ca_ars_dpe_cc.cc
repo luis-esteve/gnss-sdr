@@ -142,12 +142,23 @@ gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
                     }
                 }
         }
+
+        d_matlab_enable = true; // TODO: Put in config file or remove when c++ version of DPE will be finished 
+        if(d_matlab_enable)
+        {
+            d_ep=engOpen("\0"); //Start the Matlab engine.
+        }
 }
 
 
 
 gps_l1_ca_ars_dpe_cc::~gps_l1_ca_ars_dpe_cc()
-{}
+{
+        if(d_matlab_enable)
+        {  
+            engClose(d_ep);  //Close Matlab engine.
+        }
+}
 
 
 int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput_items,
@@ -174,7 +185,7 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
         {
             std::cout << "PVT message arrival: Position at " << boost::posix_time::to_simple_string(current_dpe_parameters.position_UTC_time)
             << std::endl << "x = " << current_dpe_parameters.pos_x_m << " [m]" << std::endl << "y = " << current_dpe_parameters.pos_y_m 
-            << " [m]" << std::endl << "z = " << current_dpe_parameters.pos_z_m  << " [m]" << std::endl << "user clock error =" 
+            << " [m]" << std::endl << "z = " << current_dpe_parameters.pos_z_m  << " [m]" << std::endl << "user clock error = " 
             << current_dpe_parameters.dt_s << " [s]" << std::endl;
             d_dpe_standby = false;
         }
@@ -222,6 +233,91 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
 
             // ############ 4. Execute DPE algorithm
             //std::cout << "Executing DPE. Number of trk channels = " << trk_channels << std::endl;
+            if(d_matlab_enable)
+            {
+                // MATLAB Representation
+
+                // float tmp_out[d_num_correlators];
+                // for (unsigned int i = 0; i < d_num_correlators; i++)
+                // {
+                //         tmp_out[i] = std::abs<float>(d_output[i]);
+                // }
+
+                // float tmp_E, tmp_P, tmp_L;
+                // tmp_E = std::abs<float>(*d_Early);
+                // tmp_P = std::abs<float>(*d_Prompt);
+                // tmp_L = std::abs<float>(*d_Late);
+                
+                //Defined mxArray, the array is one line of real numbers, N columns.
+                mxArray *m_radius = mxCreateDoubleMatrix(2, 1, mxREAL);
+                double tmp_m_radius[2];
+                
+                // Copy the d_min and d_max radius value to a vector 
+                tmp_m_radius(0) = d_min;
+                tmp_m_radius(1) = d_max;
+
+                //Copy the c ++ array of value to the corresponding mxArray 
+                memcpy(mxGetPr(m_radius), &tmp_m_radius(0), 2*sizeof(double));
+
+                //MxArray array will be written to the Matlab workspace 
+                engPutVariable(d_ep, "radius", m_radius);
+                    
+                mxArray *m_n_iter = mxCreateDoubleMatrix(1, 1, mxREAL);
+                dou_m_n_iter = static_cast<double>(d_num_iter);
+                memcpy(mxGetPr(m_n_iter), &tmp_m_n_iter, sizeof(double));
+                engPutVariable(d_ep, "n_iter", m_n_iter);
+
+                mxArray *m_min_trk_ch = mxCreateDoubleMatrix(1, 1, mxREAL);
+                double tmp_m_min_trk_ch;
+                tmp_m_min_trk_ch = static_cast<double>(d_min_trk_channels);
+                memcpy(mxGetPr(m_min_trk_ch), &tmp_m_min_trk_ch, sizeof(double));
+                engPutVariable(d_ep, "min_trk_channels", m_min_trk_ch);
+
+                mxArray *m_cf = mxCreateDoubleMatrix(1, 1, mxREAL);
+                double tmp_m_cf;
+                tmp_m_cf = static_cast<double>(d_constant_factor);
+                memcpy(mxGetPr(m_cf), &tmp_m_cf, sizeof(double));
+                engPutVariable(d_ep, "cf", m_cf);
+
+                // mxArray *m_index = mxCreateDoubleMatrix(d_num_correlators, 1, mxREAL);
+                // double *tmp_m_index = new double [d_num_correlators];
+                // for (unsigned int i = 0; i < d_num_correlators; i++)
+                //     {
+                //         tmp_m_index[i] = static_cast<double>(d_code_index[i]);
+                //     }
+                        
+                // memcpy(mxGetPr(m_index), tmp_m_index, d_num_correlators*sizeof(double));
+                // engPutVariable(d_ep, "mat_index", m_index);
+
+                // mxArray *m_epl_corr = mxCreateDoubleMatrix(3, 1, mxREAL);
+                // double *tmp_m_epl_corr = new double [3];
+                // tmp_m_epl_corr[0] = static_cast<double>(tmp_E);
+                // tmp_m_epl_corr[1] = static_cast<double>(tmp_P);
+                // tmp_m_epl_corr[2] = static_cast<double>(tmp_L);
+                // memcpy(mxGetPr(m_epl_corr), tmp_m_epl_corr, 3*sizeof(double));
+                // engPutVariable(d_ep, "epl_corr", m_epl_corr);
+
+                // mxArray *m_epl_index = mxCreateDoubleMatrix(3, 1, mxREAL);
+                // double *tmp_m_epl_index = new double [3];
+                // tmp_m_epl_index[0] = static_cast<double>(d_code_index[d_num_oneside_correlators-d_el_index-1]);
+                // tmp_m_epl_index[1] = static_cast<double>(d_code_index[d_num_oneside_correlators]);
+                // tmp_m_epl_index[2] = static_cast<double>(d_code_index[d_num_oneside_correlators+d_el_index+1]);
+                // memcpy(mxGetPr(m_epl_index), tmp_m_epl_index, 3*sizeof(double));
+                // engPutVariable(d_ep, "epl_index", m_epl_index);
+
+                //Matlab engine sends drawing commands. 
+                engEvalString(d_ep, "/home/luis/dev/gnss-sdr-luis/src/utils/matlab/dpe/ars_dpe");  
+
+                // delete tmp_corr;
+                // delete tmp_m_index;
+                mxDestroyArray(m_radius);
+                mxDestroyArray(m_n_iter);
+                mxDestroyArray(m_min_trk_ch);
+                mxDestroyArray(m_cf);
+                // mxDestroyArray(m_corr);
+                // mxDestroyArray(m_epl_index);
+                // mxDestroyArray(m_epl_corr);
+            }
         }
 
         while(global_dpe_msg_queue.try_pop(current_dpe_parameters)) {}
