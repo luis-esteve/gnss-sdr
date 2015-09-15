@@ -56,12 +56,16 @@ gps_l1_ca_ars_dpe_cc_sptr gps_l1_ca_make_ars_dpe_cc(unsigned int n_channels,
                                             boost::shared_ptr<gr::msg_queue> queue,
                                             bool dump,
                                             std::string dump_filename,
+                                            unsigned int min_trk_channels,
+                                            unsigned int min_radius,
+                                            unsigned int max_radius,
+                                            unsigned int constant_factor,
+                                            unsigned int num_iter,
                                             int output_rate_ms,
                                             int display_rate_ms,
                                             bool flag_nmea_tty_port,
                                             std::string nmea_dump_filename,
-                                            std::string nmea_dump_devname,
-                                            unsigned int min_trk_channels);
+                                            std::string nmea_dump_devname);
 
 /*!
  * \brief This class implements a block that computes the PVT solution
@@ -70,25 +74,33 @@ class gps_l1_ca_ars_dpe_cc : public gr::block
 {
 private:
     friend gps_l1_ca_ars_dpe_cc_sptr gps_l1_ca_make_ars_dpe_cc(unsigned int nchannels,
-                                                       boost::shared_ptr<gr::msg_queue> queue,
-                                                       bool dump,
-                                                       std::string dump_filename,
-                                                       int output_rate_ms,
-                                                       int display_rate_ms,
-                                                       bool flag_nmea_tty_port,
-                                                       std::string nmea_dump_filename,
-                                                       std::string nmea_dump_devname,
-                                                       unsigned int min_trk_channels);
+                                                        boost::shared_ptr<gr::msg_queue> queue,
+                                                        bool dump,
+                                                        std::string dump_filename,
+                                                        unsigned int min_trk_channels,
+                                                        unsigned int min_radius,
+                                                        unsigned int max_radius,
+                                                        unsigned int constant_factor,
+                                                        unsigned int num_iter,
+                                                        int output_rate_ms,
+                                                        int display_rate_ms,
+                                                        bool flag_nmea_tty_port,
+                                                        std::string nmea_dump_filename,
+                                                        std::string nmea_dump_devname);
     gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
-                     boost::shared_ptr<gr::msg_queue> queue,
-                     bool dump,
-                     std::string dump_filename,
-                     int output_rate_ms,
-                     int display_rate_ms,
-                     bool flag_nmea_tty_port,
-                     std::string nmea_dump_filename,
-                     std::string nmea_dump_devname,
-                     unsigned int min_trk_channels);
+                    boost::shared_ptr<gr::msg_queue> queue,
+                    bool dump,
+                    std::string dump_filename,
+                    unsigned int min_trk_channels,
+                    unsigned int min_radius,
+                    unsigned int max_radius,
+                    unsigned int constant_factor,
+                    unsigned int num_iter,
+                    int output_rate_ms,
+                    int display_rate_ms,
+                    bool flag_nmea_tty_port,
+                    std::string nmea_dump_filename,
+                    std::string nmea_dump_devname);
     boost::shared_ptr<gr::msg_queue> d_queue;
     bool d_dump;
     // bool b_rinex_header_writen;
@@ -107,6 +119,10 @@ private:
     double d_rx_time;
     std::shared_ptr<gps_l1_ca_ls_pvt> d_ls_pvt;
     unsigned int d_min_trk_channels;
+    unsigned int d_min_radius;
+    unsigned int d_max_radius;
+    unsigned int d_constant_factor;
+    unsigned int d_num_iter;
     bool d_dpe_standby;
 
 public:

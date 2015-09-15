@@ -71,11 +71,25 @@ GpsL1CaArsDpe::GpsL1CaArsDpe(ConfigurationInterface* configuration,
     nmea_dump_devname = configuration->property(role + ".nmea_dump_devname", default_nmea_dump_devname);
     
     // Minimum number of channels in tracking to stay in DPE mode
-    unsigned int trk_channels;
-    trk_channels = configuration->property(role + ".min_trk_channels", 4);
+    unsigned int min_trk_channels;
+    min_trk_channels = configuration->property(role + ".min_trk_channels", 4);
+
+    unsigned int min_radius;
+    min_radius = configuration->property(role + ".d_min_m", 1);
+
+    unsigned int max_radius;
+    max_radius = configuration->property(role + ".d_max_m", 50);
+
+    unsigned int constant_factor;
+    constant_factor = configuration->property(role + ".cf", 2);
+
+    unsigned int num_iter;
+    num_iter = configuration->property(role + ".n_iter", 200);
+
     // make PVT object
-    dpe_ = gps_l1_ca_make_ars_dpe_cc(in_streams_, queue_, dump_, dump_filename_, output_rate_ms, 
-        display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname, trk_channels);
+    dpe_ = gps_l1_ca_make_ars_dpe_cc(in_streams_, queue_, dump_, dump_filename_,
+        min_trk_channels, min_radius, max_radius, constant_factor, num_iter,
+        output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname);
     DLOG(INFO) << "pvt(" << dpe_->unique_id() << ")";
 }
 

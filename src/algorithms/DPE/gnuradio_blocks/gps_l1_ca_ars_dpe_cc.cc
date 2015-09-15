@@ -60,23 +60,29 @@ extern concurrent_queue<Dpe_Motion_Parameters> global_dpe_msg_queue;
 
 gps_l1_ca_ars_dpe_cc_sptr
 gps_l1_ca_make_ars_dpe_cc(unsigned int nchannels, boost::shared_ptr<gr::msg_queue> queue, bool dump, 
-    std::string dump_filename, int output_rate_ms, int display_rate_ms, bool flag_nmea_tty_port, 
-    std::string nmea_dump_filename, std::string nmea_dump_devname, unsigned int min_trk_channels)
+    std::string dump_filename, unsigned int min_trk_channels, unsigned int min_radius, unsigned int max_radius,
+    unsigned int constant_factor, unsigned int num_iter, int output_rate_ms, int display_rate_ms,
+    bool flag_nmea_tty_port, std::string nmea_dump_filename, std::string nmea_dump_devname)
 {
     return gps_l1_ca_ars_dpe_cc_sptr(new gps_l1_ca_ars_dpe_cc(nchannels, queue, dump, dump_filename, 
-        output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname, min_trk_channels));
+        min_trk_channels, min_radius, max_radius, constant_factor, num_iter, output_rate_ms,
+        display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname));
 }
 
 
 gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
         boost::shared_ptr<gr::msg_queue> queue,
         bool dump, std::string dump_filename,
+        unsigned int min_trk_channels,
+        unsigned int min_radius,
+        unsigned int max_radius,
+        unsigned int constant_factor,
+        unsigned int num_iter,
         int output_rate_ms,
         int display_rate_ms,
         bool flag_nmea_tty_port,
         std::string nmea_dump_filename,
-        std::string nmea_dump_devname,
-        unsigned int min_trk_channels) :
+        std::string nmea_dump_devname) :
              gr::block("gps_l1_ca_ars_dpe_cc", gr::io_signature::make(nchannels, nchannels,  sizeof(Gnss_Synchro)),
              gr::io_signature::make(0, 0, sizeof(gr_complex)) )
 {
@@ -108,7 +114,10 @@ gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
     d_rx_time = 0.0;
 
     d_min_trk_channels = min_trk_channels;
-
+    d_min_radius = min_radius;
+    d_max_radius = max_radius;
+    d_constant_factor = constant_factor;
+    d_num_iter = num_iter;
     d_dpe_standby = true;
 
     // b_rinex_header_writen = false;
@@ -163,6 +172,10 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
     {
         while(global_dpe_msg_queue.try_pop(current_dpe_parameters))
         {
+            std::cout << "PVT message arrival: Position at " << boost::posix_time::to_simple_string(current_dpe_parameters.position_UTC_time)
+            << "x = " << current_dpe_parameters.pos_x_m << " [m]" << std::endl << "y = " << current_dpe_parameters.pos_y_m 
+            << " [m]" << std::endl << "z = " << current_dpe_parameters.pos_z_m  << " [m]" << std::endl << "user clock error =" 
+            << current_dpe_parameters.dt_s << " [s]" << std::endl;
             std::cout << "PVT message arrival: x = " << current_dpe_parameters.pos_x_m << std::endl;
             d_dpe_standby = false;
         }
@@ -199,16 +212,17 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
 
         if(d_min_trk_channels > trk_channels)
         {
-                // ############ 3. READ EPHEMERIS/UTC_MODE/IONO FROM GLOBAL MAPS ####
-
-                d_ls_pvt->gps_ephemeris_map = global_gps_ephemeris_map.get_map_copy();
-
-                // ############ 4. Execute DPE algorithm
-                std::cout << "Executing DPE" << std::endl;
-        }else
-        {
             d_dpe_standby = true;
             std::cout << "DPE lost of lock, request PVT " << std::endl;
+            
+        }else
+        {
+            // ############ 3. READ EPHEMERIS/UTC_MODE/IONO FROM GLOBAL MAPS ####
+
+            d_ls_pvt->gps_ephemeris_map = global_gps_ephemeris_map.get_map_copy();
+
+            // ############ 4. Execute DPE algorithm
+            //std::cout << "Executing DPE. Number of trk channels = " << trk_channels << std::endl;
         }
 
         while(global_dpe_msg_queue.try_pop(current_dpe_parameters)) {}
