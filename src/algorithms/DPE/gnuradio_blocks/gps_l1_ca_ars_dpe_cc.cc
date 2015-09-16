@@ -253,17 +253,18 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
                 double tmp_m_radius[2];
                 
                 // Copy the d_min and d_max radius value to a vector 
-                tmp_m_radius(0) = d_min;
-                tmp_m_radius(1) = d_max;
+                tmp_m_radius[0] = d_min_radius;
+                tmp_m_radius[1] = d_max_radius;
 
                 //Copy the c ++ array of value to the corresponding mxArray 
-                memcpy(mxGetPr(m_radius), &tmp_m_radius(0), 2*sizeof(double));
+                memcpy(mxGetPr(m_radius), &tmp_m_radius[0], 2*sizeof(double));
 
                 //MxArray array will be written to the Matlab workspace 
                 engPutVariable(d_ep, "radius", m_radius);
                     
                 mxArray *m_n_iter = mxCreateDoubleMatrix(1, 1, mxREAL);
-                dou_m_n_iter = static_cast<double>(d_num_iter);
+                double tmp_m_n_iter;
+                tmp_m_n_iter = static_cast<double>(d_num_iter);
                 memcpy(mxGetPr(m_n_iter), &tmp_m_n_iter, sizeof(double));
                 engPutVariable(d_ep, "n_iter", m_n_iter);
 
@@ -306,7 +307,12 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
                 // engPutVariable(d_ep, "epl_index", m_epl_index);
 
                 //Matlab engine sends drawing commands. 
-                engEvalString(d_ep, "/home/luis/dev/gnss-sdr-luis/src/utils/matlab/dpe/ars_dpe");  
+                char buffer[1001]; //TODO: Only for DEBUG
+                buffer[1000] = '\0';
+                engOutputBuffer(d_ep, buffer, 1000);
+                engEvalString(d_ep, "scriptname='/home/luis/dev/gnss-sdr-luis/src/utils/matlab/dpe/ars_dpe'");  
+                engEvalString(d_ep, "run(scriptname)");
+                std::cout << buffer << std::endl;
 
                 // delete tmp_corr;
                 // delete tmp_m_index;
