@@ -57,6 +57,7 @@ gps_l1_ca_ars_dpe_cc_sptr gps_l1_ca_make_ars_dpe_cc(unsigned int n_channels,
                                             boost::shared_ptr<gr::msg_queue> queue,
                                             bool dump,
                                             std::string dump_filename,
+                                            unsigned int num_correlators,
                                             unsigned int min_trk_channels,
                                             unsigned int min_radius,
                                             unsigned int max_radius,
@@ -78,6 +79,7 @@ private:
                                                         boost::shared_ptr<gr::msg_queue> queue,
                                                         bool dump,
                                                         std::string dump_filename,
+                                                        unsigned int num_correlators,
                                                         unsigned int min_trk_channels,
                                                         unsigned int min_radius,
                                                         unsigned int max_radius,
@@ -92,6 +94,7 @@ private:
                     boost::shared_ptr<gr::msg_queue> queue,
                     bool dump,
                     std::string dump_filename,
+                    unsigned int num_correlators,
                     unsigned int min_trk_channels,
                     unsigned int min_radius,
                     unsigned int max_radius,
@@ -115,20 +118,25 @@ private:
     int d_display_rate_ms;
     long unsigned int d_sample_counter;
     long unsigned int d_last_sample_nav_output;
-    std::shared_ptr<Kml_Printer> d_kml_dump;
-    std::shared_ptr<Nmea_Printer> d_nmea_printer;
+    // std::shared_ptr<Kml_Printer> d_kml_dump;
+    // std::shared_ptr<Nmea_Printer> d_nmea_printer;
     double d_rx_time;
     std::shared_ptr<gps_l1_ca_ls_pvt> d_ls_pvt;
+    unsigned int d_num_correlators;
     unsigned int d_min_trk_channels;
     unsigned int d_min_radius;
     unsigned int d_max_radius;
     unsigned int d_constant_factor;
     unsigned int d_num_iter;
     bool d_dpe_standby;
+    bool d_pull_in;
     
     // Matlab representation
     Engine *d_ep; //Define Matlab engine pointer.
     bool d_matlab_enable;
+    unsigned int d_matlab_count;
+    unsigned int d_matlab_plot_period;
+
 
 public:
     ~gps_l1_ca_ars_dpe_cc (); //!< Default destructor

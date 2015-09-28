@@ -116,7 +116,6 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multico
         gr::block("Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc", gr::io_signature::make(1, 1, sizeof(gr_complex)),
                 gr::io_signature::make(1, 1, sizeof(Gnss_Synchro)))
 {
-    std::cout << "Constructor" << std::endl;
     // initialize internal vars
     d_queue = queue;
     d_dump = dump;
@@ -128,8 +127,6 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multico
     d_vector_length = vector_length;
     d_num_oneside_correlators = num_oneside_correlators;
     d_num_correlators = 2*d_num_oneside_correlators + 1;
-    std::cout << "d_num_oneside_correlators = " << d_num_oneside_correlators << std::endl;
-    std::cout << "d_num_correlators = " << d_num_correlators << std::endl;
     d_correlators_space_chips = new double[d_num_oneside_correlators];
     d_code_index = new int[d_num_correlators];
     for(unsigned int i = 0; i < d_num_oneside_correlators; i++)
@@ -137,7 +134,6 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multico
         d_correlators_space_chips[i] = static_cast<double>(correlators_space_chips[i]); // Define correlators distance (in chips)
     }
     d_el_index = el_index;
-    std::cout << "d_el_index = " << d_el_index << std::endl;
     d_dump_filename = dump_filename;
 
     // Initialize tracking variables ==========================================
@@ -210,11 +206,6 @@ Gps_L1_Ca_Dll_Fll_Pll_Multicorrelator_Tracking_cc::Gps_L1_Ca_Dll_Fll_Pll_Multico
     d_matlab_plot_period = matlab_plot_period;
     
     d_matlab_count = 0;
-
-    for (unsigned int i= 0; i < d_num_oneside_correlators; i++)
-        {
-            std::cout << " d_correlators_space_chips[" << i << "] = " << d_correlators_space_chips[i] << std::endl;
-        }
 }
 
 

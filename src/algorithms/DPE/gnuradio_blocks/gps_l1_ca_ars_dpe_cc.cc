@@ -60,19 +60,20 @@ extern concurrent_queue<Dpe_Motion_Parameters> global_dpe_msg_queue;
 
 gps_l1_ca_ars_dpe_cc_sptr
 gps_l1_ca_make_ars_dpe_cc(unsigned int nchannels, boost::shared_ptr<gr::msg_queue> queue, bool dump, 
-    std::string dump_filename, unsigned int min_trk_channels, unsigned int min_radius, unsigned int max_radius,
-    unsigned int constant_factor, unsigned int num_iter, int output_rate_ms, int display_rate_ms,
+    std::string dump_filename, unsigned int num_correlators, unsigned int min_trk_channels, unsigned int min_radius,
+    unsigned int max_radius, unsigned int constant_factor, unsigned int num_iter, int output_rate_ms, int display_rate_ms,
     bool flag_nmea_tty_port, std::string nmea_dump_filename, std::string nmea_dump_devname)
 {
     return gps_l1_ca_ars_dpe_cc_sptr(new gps_l1_ca_ars_dpe_cc(nchannels, queue, dump, dump_filename, 
-        min_trk_channels, min_radius, max_radius, constant_factor, num_iter, output_rate_ms,
-        display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname));
+        num_correlators, min_trk_channels, min_radius, max_radius, constant_factor, num_iter,
+        output_rate_ms, display_rate_ms, flag_nmea_tty_port, nmea_dump_filename, nmea_dump_devname));
 }
 
 
 gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
         boost::shared_ptr<gr::msg_queue> queue,
         bool dump, std::string dump_filename,
+        unsigned int num_correlators,
         unsigned int min_trk_channels,
         unsigned int min_radius,
         unsigned int max_radius,
@@ -95,14 +96,14 @@ gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
     std::string dump_ls_pvt_filename = dump_filename;
 
     //initialize kml_printer
-    std::string kml_dump_filename;
-    kml_dump_filename = d_dump_filename;
-    kml_dump_filename.append(".kml");
-    d_kml_dump = std::make_shared<Kml_Printer>();
-    d_kml_dump->set_headers(kml_dump_filename);
+    // std::string kml_dump_filename;
+    // kml_dump_filename = d_dump_filename;
+    // kml_dump_filename.append(".kml");
+    // d_kml_dump = std::make_shared<Kml_Printer>();
+    // d_kml_dump->set_headers(kml_dump_filename);
 
     //initialize nmea_printer
-    d_nmea_printer = std::make_shared<Nmea_Printer>(nmea_dump_filename, flag_nmea_tty_port, nmea_dump_devname);
+    // d_nmea_printer = std::make_shared<Nmea_Printer>(nmea_dump_filename, flag_nmea_tty_port, nmea_dump_devname);
 
     d_dump_filename.append("_raw.dat");
     dump_ls_pvt_filename.append("_ls_pvt.dat");
@@ -113,12 +114,14 @@ gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
     d_last_sample_nav_output = 0;
     d_rx_time = 0.0;
 
+    d_num_correlators = num_correlators;
     d_min_trk_channels = min_trk_channels;
     d_min_radius = min_radius;
     d_max_radius = max_radius;
     d_constant_factor = constant_factor;
     d_num_iter = num_iter;
     d_dpe_standby = true;
+    d_pull_in = false;
 
     // b_rinex_header_writen = false;
     // b_rinex_header_updated = false;
@@ -143,11 +146,15 @@ gps_l1_ca_ars_dpe_cc::gps_l1_ca_ars_dpe_cc(unsigned int nchannels,
                 }
         }
 
-        d_matlab_enable = true; // TODO: Put in config file or remove when c++ version of DPE will be finished 
-        if(d_matlab_enable)
+    d_matlab_enable = true; // TODO: Put in config file or remove when c++ version of DPE will be finished 
+    if(d_matlab_enable)
         {
             d_ep=engOpen("\0"); //Start the Matlab engine.
         }
+    
+    d_matlab_plot_period = 1000;
+    
+    d_matlab_count = 0;
 }
 
 
@@ -188,18 +195,18 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
             << " [m]" << std::endl << "z = " << current_dpe_parameters.pos_z_m  << " [m]" << std::endl << "user clock error = " 
             << current_dpe_parameters.dt_s << " [s]" << std::endl;
             d_dpe_standby = false;
+            d_pull_in = true;
         }
     }
 
     if(!d_dpe_standby)
     {   
 
+//        std::cout << "Entra en el if(!d_dpe_standby)" << std::endl;
+
         // ############ 1. Empty the message queue ########
 
         Gnss_Synchro current_gnss_synchro[d_nchannels];
-        std::map<int,Gnss_Synchro> current_gnss_synchro_map;
-        std::map<int,Gnss_Synchro>::iterator gnss_synchro_iter;
-
     
         // ############ 2. Read the GNSS SYNCHRO objects from available tracking channels ########
 
@@ -208,34 +215,94 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
             {
 
                 //Copy the telemetry decoder data to local copy
-                current_gnss_synchro[i] = in[i][0]; // es necesario?
+                current_gnss_synchro[i] = in[i][0];
+
+                //record the word structure in a map for pseudorange computation
+
+                d_rx_time = in[i][0].d_TOW_at_current_symbol; // all the channels have the same RX timestamp (common RX time pseudoranges) // lo necesito?
+
  
                 if (current_gnss_synchro[i].Flag_valid_tracking) //if this channel is in tracking mode
                 {
                     trk_channels++;
-                    //record the word structure in a map for pseudorange computation
-                    current_gnss_synchro_map.insert(std::pair<int, Gnss_Synchro>(current_gnss_synchro[i].Channel_ID, current_gnss_synchro[i])); // guardo el channel_ID o el PRN?
-                    d_rx_time = in[i][0].d_TOW_at_current_symbol; // all the channels have the same RX timestamp (common RX time pseudoranges) // lo necesito?
 
                 }
             }
 
+//        std::cout << "trk_channels = " << trk_channels << std::endl;
+
         if(d_min_trk_channels > trk_channels)
         {
             d_dpe_standby = true;
-            std::cout << "DPE lost of lock, request PVT " << std::endl;
+            std::cout << "DPE lost of lock, request PVT." << std::endl;
             
         }else
         {
+//          std::cout << "Entra en el else." << std::endl;
+
             // ############ 3. READ EPHEMERIS/UTC_MODE/IONO FROM GLOBAL MAPS ####
 
-            d_ls_pvt->gps_ephemeris_map = global_gps_ephemeris_map.get_map_copy();
+            std::map<int,Gps_Ephemeris> gps_ephemeris_map; //!< Map storing new Gps_Ephemeris
+            gps_ephemeris_map = global_gps_ephemeris_map.get_map_copy();
 
             // ############ 4. Execute DPE algorithm
             //std::cout << "Executing DPE. Number of trk channels = " << trk_channels << std::endl;
             if(d_matlab_enable)
             {
+
                 // MATLAB Representation
+
+                if(d_pull_in)
+                {
+                    //Defined mxArray, the array is one line of real numbers, N columns.
+                    mxArray *m_radius = mxCreateDoubleMatrix(2, 1, mxREAL);
+                    double tmp_m_radius[2];
+                    
+                    // Copy the d_min and d_max radius value to a vector 
+                    tmp_m_radius[0] = d_min_radius;
+                    tmp_m_radius[1] = d_max_radius;
+
+                    //Copy the c ++ array of value to the corresponding mxArray 
+                    memcpy(mxGetPr(m_radius), &tmp_m_radius[0], 2*sizeof(double));
+
+                    //MxArray array will be written to the Matlab workspace 
+                    engPutVariable(d_ep, "radius", m_radius);
+                        
+                    mxArray *m_n_iter = mxCreateDoubleMatrix(1, 1, mxREAL);
+                    double tmp_m_n_iter;
+                    tmp_m_n_iter = static_cast<double>(d_num_iter);
+                    memcpy(mxGetPr(m_n_iter), &tmp_m_n_iter, sizeof(double));
+                    engPutVariable(d_ep, "n_iter", m_n_iter);
+
+                    mxArray *m_cf = mxCreateDoubleMatrix(1, 1, mxREAL);
+                    double tmp_m_cf;
+                    tmp_m_cf = static_cast<double>(d_constant_factor);
+                    memcpy(mxGetPr(m_cf), &tmp_m_cf, sizeof(double));
+                    engPutVariable(d_ep, "cf", m_cf);
+
+                    mxArray *m_pos = mxCreateDoubleMatrix(3, 1, mxREAL);
+                    double tmp_m_pos[3];
+                    tmp_m_pos[0] = current_dpe_parameters.pos_x_m;
+                    tmp_m_pos[1] = current_dpe_parameters.pos_y_m;
+                    tmp_m_pos[2] = current_dpe_parameters.pos_z_m;
+                    memcpy(mxGetPr(m_pos), &tmp_m_pos, 3*sizeof(double));
+                    engPutVariable(d_ep, "pos_0", m_pos);
+
+                    mxArray *m_dt = mxCreateDoubleMatrix(1, 1, mxREAL);
+                    double tmp_m_dt;
+                    tmp_m_dt = current_dpe_parameters.dt_s;
+                    memcpy(mxGetPr(m_dt), &tmp_m_dt, sizeof(double));
+                    engPutVariable(d_ep, "dt", m_dt);
+
+                    mxDestroyArray(m_dt);
+                    mxDestroyArray(m_pos);
+                    mxDestroyArray(m_cf);
+                    mxDestroyArray(m_n_iter);
+                    mxDestroyArray(m_radius);
+
+                    d_pull_in = false;
+                }
+
 
                 // float tmp_out[d_num_correlators];
                 // for (unsigned int i = 0; i < d_num_correlators; i++)
@@ -247,82 +314,103 @@ int gps_l1_ca_ars_dpe_cc::general_work (int noutput_items, gr_vector_int &ninput
                 // tmp_E = std::abs<float>(*d_Early);
                 // tmp_P = std::abs<float>(*d_Prompt);
                 // tmp_L = std::abs<float>(*d_Late);
-                
-                //Defined mxArray, the array is one line of real numbers, N columns.
-                mxArray *m_radius = mxCreateDoubleMatrix(2, 1, mxREAL);
-                double tmp_m_radius[2];
-                
-                // Copy the d_min and d_max radius value to a vector 
-                tmp_m_radius[0] = d_min_radius;
-                tmp_m_radius[1] = d_max_radius;
+                if(d_matlab_count >= d_matlab_plot_period)
+                {  
+                    //si el modulo es cero, entonces es multiplo  
+                    if(d_matlab_count%d_matlab_plot_period == 0)
+                    {
+                        mxArray *m_trk_ch = mxCreateDoubleMatrix(1, 1, mxREAL);
+                        double tmp_m_trk_ch;
+                        tmp_m_trk_ch = static_cast<double>(trk_channels);
+                        memcpy(mxGetPr(m_trk_ch), &tmp_m_trk_ch, sizeof(double));
+                        engPutVariable(d_ep, "trk_channels", m_trk_ch);
 
-                //Copy the c ++ array of value to the corresponding mxArray 
-                memcpy(mxGetPr(m_radius), &tmp_m_radius[0], 2*sizeof(double));
+                        mxArray *m_correlators = mxCreateDoubleMatrix(d_num_correlators, trk_channels, mxCOMPLEX);
+                        double  *start_of_rp, *start_of_ip;
+                        double *tmp_m_real_correlators, *tmp_m_imag_correlators;
+                        tmp_m_real_correlators = new double [trk_channels*d_num_correlators];
+                        tmp_m_imag_correlators = new double [trk_channels*d_num_correlators];
 
-                //MxArray array will be written to the Matlab workspace 
-                engPutVariable(d_ep, "radius", m_radius);
-                    
-                mxArray *m_n_iter = mxCreateDoubleMatrix(1, 1, mxREAL);
-                double tmp_m_n_iter;
-                tmp_m_n_iter = static_cast<double>(d_num_iter);
-                memcpy(mxGetPr(m_n_iter), &tmp_m_n_iter, sizeof(double));
-                engPutVariable(d_ep, "n_iter", m_n_iter);
+                        for (unsigned int i, index = 0; i < d_nchannels; i++)
+                            {
+                            if(current_gnss_synchro[i].Flag_valid_tracking)
+                                {
+                                    for (unsigned int j = 0; j < d_num_correlators; j++)
+                                        {
+                                            tmp_m_real_correlators[index] = static_cast<double>(current_gnss_synchro[i].Multi_correlation[j].real());
+                                            tmp_m_imag_correlators[index] = static_cast<double>(current_gnss_synchro[i].Multi_correlation[j].imag());
+                                            index++;
+                                        }
+                                        
+                                }
+                            }
 
-                mxArray *m_min_trk_ch = mxCreateDoubleMatrix(1, 1, mxREAL);
-                double tmp_m_min_trk_ch;
-                tmp_m_min_trk_ch = static_cast<double>(d_min_trk_channels);
-                memcpy(mxGetPr(m_min_trk_ch), &tmp_m_min_trk_ch, sizeof(double));
-                engPutVariable(d_ep, "min_trk_channels", m_min_trk_ch);
+                        // for (unsigned int i; i < trk_channels; i++)
+                        //     {
+                        //     for (unsigned int j = 0; j < d_num_correlators; j++)
+                        //         {
+                        //             std::cout << "Correlator ["<< i+1 << "," << j+1 << "] = " << tmp_m_real_correlators[j] << "+j" << tmp_m_imag_correlators[j] << std::endl;
+                        //         }
+                        //     }
 
-                mxArray *m_cf = mxCreateDoubleMatrix(1, 1, mxREAL);
-                double tmp_m_cf;
-                tmp_m_cf = static_cast<double>(d_constant_factor);
-                memcpy(mxGetPr(m_cf), &tmp_m_cf, sizeof(double));
-                engPutVariable(d_ep, "cf", m_cf);
+                        for (unsigned int i; i < trk_channels*d_num_correlators; i++)
+                            {
+                                std::cout << "Correlator ["<< i << "] = " << tmp_m_real_correlators[i] << "+j" << tmp_m_imag_correlators[i] << std::endl;
+                            }
 
-                // mxArray *m_index = mxCreateDoubleMatrix(d_num_correlators, 1, mxREAL);
-                // double *tmp_m_index = new double [d_num_correlators];
-                // for (unsigned int i = 0; i < d_num_correlators; i++)
-                //     {
-                //         tmp_m_index[i] = static_cast<double>(d_code_index[i]);
-                //     }
+                        /* Populate the real part of the created array. */ 
+                        start_of_rp = (double *)mxGetPr(m_correlators);
+                        memcpy(start_of_rp, tmp_m_real_correlators, trk_channels*d_num_correlators*sizeof(double));
+                        /* Populate the imaginary part of the created array. */ 
+                        start_of_ip = (double *)mxGetPi(m_correlators);
+                        memcpy(start_of_ip, tmp_m_imag_correlators, trk_channels*d_num_correlators*sizeof(double));
                         
-                // memcpy(mxGetPr(m_index), tmp_m_index, d_num_correlators*sizeof(double));
-                // engPutVariable(d_ep, "mat_index", m_index);
+                        engPutVariable(d_ep, "correlators", m_correlators);
 
-                // mxArray *m_epl_corr = mxCreateDoubleMatrix(3, 1, mxREAL);
-                // double *tmp_m_epl_corr = new double [3];
-                // tmp_m_epl_corr[0] = static_cast<double>(tmp_E);
-                // tmp_m_epl_corr[1] = static_cast<double>(tmp_P);
-                // tmp_m_epl_corr[2] = static_cast<double>(tmp_L);
-                // memcpy(mxGetPr(m_epl_corr), tmp_m_epl_corr, 3*sizeof(double));
-                // engPutVariable(d_ep, "epl_corr", m_epl_corr);
+                        // mxArray *m_epl_corr = mxCreateDoubleMatrix(3, 1, mxREAL);
+                        // double *tmp_m_epl_corr = new double [3];
+                        // tmp_m_epl_corr[0] = static_cast<double>(tmp_E);
+                        // tmp_m_epl_corr[1] = static_cast<double>(tmp_P);
+                        // tmp_m_epl_corr[2] = static_cast<double>(tmp_L);
+                        // memcpy(mxGetPr(m_epl_corr), tmp_m_epl_corr, 3*sizeof(double));
+                        // engPutVariable(d_ep, "epl_corr", m_epl_corr);
 
-                // mxArray *m_epl_index = mxCreateDoubleMatrix(3, 1, mxREAL);
-                // double *tmp_m_epl_index = new double [3];
-                // tmp_m_epl_index[0] = static_cast<double>(d_code_index[d_num_oneside_correlators-d_el_index-1]);
-                // tmp_m_epl_index[1] = static_cast<double>(d_code_index[d_num_oneside_correlators]);
-                // tmp_m_epl_index[2] = static_cast<double>(d_code_index[d_num_oneside_correlators+d_el_index+1]);
-                // memcpy(mxGetPr(m_epl_index), tmp_m_epl_index, 3*sizeof(double));
-                // engPutVariable(d_ep, "epl_index", m_epl_index);
+                        // mxArray *m_epl_index = mxCreateDoubleMatrix(3, 1, mxREAL);
+                        // double *tmp_m_epl_index = new double [3];
+                        // tmp_m_epl_index[0] = static_cast<double>(d_code_index[d_num_oneside_correlators-d_el_index-1]);
+                        // tmp_m_epl_index[1] = static_cast<double>(d_code_index[d_num_oneside_correlators]);
+                        // tmp_m_epl_index[2] = static_cast<double>(d_code_index[d_num_oneside_correlators+d_el_index+1]);
+                        // memcpy(mxGetPr(m_epl_index), tmp_m_epl_index, 3*sizeof(double));
+                        // engPutVariable(d_ep, "epl_index", m_epl_index);
 
-                //Matlab engine sends drawing commands. 
-                char buffer[1001]; //TODO: Only for DEBUG
-                buffer[1000] = '\0';
-                engOutputBuffer(d_ep, buffer, 1000);
-                engEvalString(d_ep, "scriptname='/home/luis/dev/gnss-sdr-luis/src/utils/matlab/dpe/ars_dpe'");  
-                engEvalString(d_ep, "run(scriptname)");
-                std::cout << buffer << std::endl;
 
-                // delete tmp_corr;
-                // delete tmp_m_index;
-                mxDestroyArray(m_radius);
-                mxDestroyArray(m_n_iter);
-                mxDestroyArray(m_min_trk_ch);
-                mxDestroyArray(m_cf);
-                // mxDestroyArray(m_corr);
-                // mxDestroyArray(m_epl_index);
-                // mxDestroyArray(m_epl_corr);
+                        //Matlab engine sends drawing commands. 
+                        char buffer[1001]; //TODO: Only for DEBUG
+                        buffer[1000] = '\0';
+                        engOutputBuffer(d_ep, buffer, 1000);
+
+                        engEvalString(d_ep, "scriptname='/home/luis/dev/gnss-sdr-luis/src/utils/matlab/dpe/ars_dpe'");  
+                        engEvalString(d_ep, "run(scriptname)");
+                        std::cout << buffer << std::endl;
+
+
+
+                        // delete tmp_corr;
+                        // delete tmp_m_index;
+         
+                        // Elimino el vector principal
+                        delete[] tmp_m_real_correlators;
+                        delete[] tmp_m_imag_correlators;
+
+
+                        mxDestroyArray(m_trk_ch);
+                        mxDestroyArray(m_correlators);
+                        // mxDestroyArray(m_epl_index);
+                        // mxDestroyArray(m_epl_corr);
+                    }
+                }
+                d_matlab_count++;
+
             }
         }
 

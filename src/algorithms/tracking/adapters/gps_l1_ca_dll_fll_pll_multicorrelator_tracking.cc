@@ -88,19 +88,13 @@ GpsL1CaDllFllPllMulticorrelatorTracking::GpsL1CaDllFllPllMulticorrelatorTracking
     pll_bw_hz = configuration->property(role + ".pll_bw_hz", 50.0);
     fll_bw_hz = configuration->property(role + ".fll_bw_hz", 100.0);
     dll_bw_hz = configuration->property(role + ".dll_bw_hz", 2.0);
-    num_oneside_correlators = configuration->property(role + ".number_of_oneside_correlators", 3);
+    num_oneside_correlators = configuration->property(role + ".number_of_oneside_correlators", 3); //TODO: Maybe read directly number of correlators?
     correlators_space_chips = new float[num_oneside_correlators];
     for (unsigned int i=0; i < num_oneside_correlators; i++)
         {
             correlators_space_chips[i] = configuration->property(role + ".correlators_space_chips_" + boost::lexical_cast<std::string>(i), 0.5);
         }
-    std::cout << "Constructor del adapter" << std::endl;
-    for (unsigned int i= 0; i < num_oneside_correlators; i++)
-        {
-            std::cout << " correlators_space_chips[" << i << "] = " << correlators_space_chips[i] << std::endl;
-        }
     el_index = configuration->property(role + ".correlators_EL_index", 0);
-    std::cout << "EL index = " << el_index << std::endl;
     matlab_enable = configuration->property(role + ".Matlab_enable", false);
     matlab_plot_period = configuration->property(role + ".Matlab_plot_period", 50);
 
